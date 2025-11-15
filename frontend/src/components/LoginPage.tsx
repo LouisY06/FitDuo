@@ -212,13 +212,46 @@ export function LoginPage() {
         style={{
           fontSize: "1rem",
           opacity: 0.9,
-          marginBottom: "3rem",
+          marginBottom: "1.5rem",
           textAlign: "center",
           color: "white",
         }}
       >
         Battle through AI-refereed workouts
       </p>
+
+      {/* How It Works Button */}
+      <button
+        type="button"
+        onClick={() => navigate("/info")}
+        style={{
+          padding: "0.75rem 1.5rem",
+          background: "rgba(99, 255, 0, 0.1)",
+          border: "1px solid rgba(99, 255, 0, 0.3)",
+          borderRadius: "12px",
+          color: "#63ff00",
+          fontFamily: "Audiowide, sans-serif",
+          fontSize: "0.875rem",
+          cursor: "pointer",
+          transition: "all 0.3s ease",
+          textShadow: "0 0 10px rgba(99, 255, 0, 0.3)",
+          marginBottom: "2rem",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "rgba(99, 255, 0, 0.2)";
+          e.currentTarget.style.borderColor = "rgba(99, 255, 0, 0.5)";
+          e.currentTarget.style.boxShadow = "0 0 20px rgba(99, 255, 0, 0.3)";
+          e.currentTarget.style.transform = "translateY(-2px)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "rgba(99, 255, 0, 0.1)";
+          e.currentTarget.style.borderColor = "rgba(99, 255, 0, 0.3)";
+          e.currentTarget.style.boxShadow = "none";
+          e.currentTarget.style.transform = "translateY(0)";
+        }}
+      >
+        How global matching works
+      </button>
 
       {/* Login Form */}
       <div

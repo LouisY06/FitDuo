@@ -1,0 +1,18 @@
+/* Globe.css */
+
+.globe-wrapper {
+  position: relative;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(99, 255, 0, 0.2);
+  background: radial-gradient(circle at center, rgba(99, 255, 0, 0.05) 0%, transparent 70%);
+}
+
+.globe-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
