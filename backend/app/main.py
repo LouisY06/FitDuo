@@ -44,6 +44,15 @@ async def root():
         "environment": settings.environment,
     }
 
+@app.get("/debug/cors")
+async def debug_cors():
+    """Debug endpoint to check CORS configuration"""
+    return {
+        "cors_origins": settings.cors_origins,
+        "cors_origins_count": len(settings.cors_origins),
+        "environment": settings.environment,
+    }
+
 
 @app.get("/health")
 async def health():
