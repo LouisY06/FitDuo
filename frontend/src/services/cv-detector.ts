@@ -138,68 +138,92 @@ export class CVDetector {
         return;
       }
 
-      const canvasCtx = this.canvasElement?.getContext("2d");
-      if (canvasCtx && this.canvasElement) {
-        canvasCtx.save();
-        canvasCtx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
-        canvasCtx.drawImage(
-          this.videoElement,
-          0,
-          0,
-          this.canvasElement.width,
-          this.canvasElement.height
-        );
+      // Check if video has valid dimensions
+      const videoWidth = this.videoElement.videoWidth;
+      const videoHeight = this.videoElement.videoHeight;
+      
+      if (!videoWidth || !videoHeight || videoWidth <= 0 || videoHeight <= 0) {
+        // Video not ready yet, skip this frame
+        if (this.isDetecting) {
+          this.animationFrameId = requestAnimationFrame(detect);
+        }
+        return;
       }
 
-      const results = this.poseLandmarker.detectForVideo(
-        this.videoElement,
-        performance.now()
-      );
-
-      if (results.landmarks && results.landmarks.length > 0) {
-        const landmarks = this.convertLandmarks(results.landmarks[0]);
+      const canvasCtx = this.canvasElement?.getContext("2d");
+      if (canvasCtx && this.canvasElement) {
+        // Set canvas size to match video
+        if (this.canvasElement.width !== videoWidth || 
+            this.canvasElement.height !== videoHeight) {
+          this.canvasElement.width = videoWidth;
+          this.canvasElement.height = videoHeight;
+        }
         
-        // Draw pose landmarks if canvas is available
-        if (this.drawingUtils && this.canvasElement) {
-          this.drawingUtils.drawLandmarks(results.landmarks[0], {
-            radius: (data) => DrawingUtils.lerp(data.from!.z!, -0.15, 0.1, 5, 1),
-          });
-          this.drawingUtils.drawConnectors(
-            results.landmarks[0],
-            PoseLandmarker.POSE_CONNECTIONS
-          );
-        }
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
+      }
 
-        // Detect reps or static holds based on exercise type
-        const isStaticHold = this.isStaticHoldExercise();
-        if (isStaticHold) {
-          this.detectStaticHold(landmarks);
+      try {
+        const results = this.poseLandmarker.detectForVideo(
+          this.videoElement,
+          performance.now()
+        );
+
+        if (results.landmarks && results.landmarks.length > 0) {
+          const landmarks = this.convertLandmarks(results.landmarks[0]);
+          
+          // Draw pose landmarks if canvas is available
+          if (this.drawingUtils && this.canvasElement && canvasCtx) {
+            // Draw landmarks
+            this.drawingUtils.drawLandmarks(results.landmarks[0], {
+              radius: (data) => DrawingUtils.lerp(data.from!.z!, -0.15, 0.1, 5, 1),
+            });
+            // Draw connections
+            this.drawingUtils.drawConnectors(
+              results.landmarks[0],
+              PoseLandmarker.POSE_CONNECTIONS
+            );
+          }
+
+          // Detect reps or static holds based on exercise type
+          const isStaticHold = this.isStaticHoldExercise();
+          if (isStaticHold) {
+            this.detectStaticHold(landmarks);
+          } else {
+            this.detectRep(landmarks);
+          }
+
+          // Validate form
+          const formValid = this.validateForm(landmarks);
+          const formErrors = formValid ? [] : this.getFormErrors(landmarks);
+
+          // Create detection result
+          const result: CVDetectionResult = {
+            landmarks,
+            repState: { ...this.repState },
+            holdState: { ...this.holdState },
+            formValid,
+            formErrors,
+          };
+
+          // Call update callback
+          if (this.onDetectionUpdate) {
+            this.onDetectionUpdate(result);
+          }
+
+          // Call form error callback if needed
+          if (!formValid && this.onFormError && formErrors.length > 0) {
+            this.onFormError(formErrors);
+          }
         } else {
-          this.detectRep(landmarks);
+          // No pose detected - clear canvas if needed
+          if (canvasCtx && this.canvasElement) {
+            canvasCtx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
+          }
         }
-
-        // Validate form
-        const formValid = this.validateForm(landmarks);
-        const formErrors = formValid ? [] : this.getFormErrors(landmarks);
-
-        // Create detection result
-        const result: CVDetectionResult = {
-          landmarks,
-          repState: { ...this.repState },
-          holdState: { ...this.holdState },
-          formValid,
-          formErrors,
-        };
-
-        // Call update callback
-        if (this.onDetectionUpdate) {
-          this.onDetectionUpdate(result);
-        }
-
-        // Call form error callback if needed
-        if (!formValid && this.onFormError && formErrors.length > 0) {
-          this.onFormError(formErrors);
-        }
+      } catch (error) {
+        console.error("Error in pose detection:", error);
+        // Continue detection loop even if there's an error
       }
 
       if (canvasCtx) {
