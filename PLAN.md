@@ -10,9 +10,9 @@
 
 ### Backend Initialization
 - Create `backend/` directory with Python virtual environment
-- Create `requirements.txt` with: FastAPI, Uvicorn, SQLModel, PostgreSQL driver, Gemini SDK, WebSockets
+- Create `requirements.txt` with: FastAPI, Uvicorn, SQLModel, PostgreSQL driver, OpenAI SDK (for OpenRouter), httpx, WebSockets
 - Set up `backend/app/` package structure with `__init__.py` files
-- Create `backend/.env` for database URL and Gemini API key
+- Create `backend/.env` for database URL and OpenRouter API key
 - Configure `backend/app/config.py` for environment variable loading
 
 ### Database Setup
@@ -67,11 +67,13 @@
 ## Phase 3: AI Core Integration - The Brain
 
 ### LLM Service
-- **`backend/app/services/llm_service.py`**: Async Gemini API client using `google.generativeai`
+- **`backend/app/services/llm_service.py`**: Async OpenRouter API client using OpenAI SDK or httpx
+- Configure OpenRouter endpoint: `https://openrouter.ai/api/v1/chat/completions`
 - **`generate_form_rules(exercise_name)`**: Returns JSON schema with 3 essential form rules (e.g., `{"elbow_angle": {"min": 90}}`)
 - **`recommend_strategy(player_a_score, player_b_score, player_b_weakness)`**: Returns recommended Exercise ID and rationale for next round
 - **`generate_narrative(round_result)`**: Returns commentary text for TTS
 - Error handling with fallback to deterministic exercise selection if API fails
+- Support for model selection via environment variable (default to cost-effective model)
 
 ### Integration Points
 - Form rules sent to frontend via WebSocket on exercise selection
@@ -79,8 +81,10 @@
 - Narrative text sent for TTS playback
 
 ### Configuration
-- Add Gemini API key to `backend/.env`
+- Add OpenRouter API key to `backend/.env` (`OPENROUTER_API_KEY`)
+- Add OpenRouter model selection to `backend/.env` (`OPENROUTER_MODEL`, e.g., `anthropic/claude-3-haiku` or `openai/gpt-3.5-turbo`)
 - Add rate limiting and retry logic for API calls
+- Configure OpenRouter headers (HTTP-Referer, X-Title for usage tracking)
 
 ## Phase 4: Advanced Features & Deployment Readiness
 
