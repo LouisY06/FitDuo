@@ -67,7 +67,7 @@ function App() {
             path="/app"
             element={
               <ProtectedRoute>
-                <VantaBackground centerContent={false}>
+                <VantaBackground>
                   <Suspense fallback={<LoadingFallback />}>
                     <AppShell />
                   </Suspense>
