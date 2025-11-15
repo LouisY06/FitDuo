@@ -104,25 +104,32 @@ export function useMatchmaking(
 
   // Start searching for a match
   const startSearching = useCallback(async (exerciseId?: number) => {
+    console.log("🔴🔴🔴 startSearching() CALLED 🔴🔴🔴", { exerciseId, playerId: playerIdRef.current });
     try {
       console.log("startSearching called", { exerciseId, playerId: playerIdRef.current });
       setLoading(true);
       setError(null);
+      console.log("✅ Loading set to true, error cleared");
 
       if (!playerIdRef.current) {
+        console.warn("⚠️ No player ID, fetching user...");
         // Try to get user ID again
         try {
           const user = await getCurrentUser();
+          console.log("👤 Got user from getCurrentUser():", user);
           if (user && (user.id || (user as any).user_id)) {
             playerIdRef.current = (user.id || (user as any).user_id) as number;
-            console.log("Got player ID:", playerIdRef.current);
+            console.log("✅ Got player ID:", playerIdRef.current);
           } else {
+            console.error("❌ User ID not found in user object:", user);
             throw new Error("User ID not found");
           }
         } catch (err) {
-          console.error("Failed to get user ID:", err);
+          console.error("❌ Failed to get user ID:", err);
           throw new Error("Please log in to start matchmaking");
         }
+      } else {
+        console.log("✅ Player ID already set:", playerIdRef.current);
       }
 
       console.log("📥 Joining queue...", { exerciseId, playerId: playerIdRef.current });
@@ -134,6 +141,7 @@ export function useMatchmaking(
         console.log("✅ Matchmaking started, isSearching set to true");
       } catch (error) {
         console.error("❌ Error joining queue:", error);
+        console.error("❌ Error details:", JSON.stringify(error, null, 2));
         throw error;
       }
 
