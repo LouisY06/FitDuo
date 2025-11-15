@@ -12,7 +12,7 @@ function getWebSocketUrl(): string {
   }
   
   // Otherwise, construct from API URL
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
   
   // Convert http/https to ws/wss
   if (apiUrl.startsWith("https://")) {

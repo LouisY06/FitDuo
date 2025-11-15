@@ -30,7 +30,7 @@ function requireAuth() {
 }
 
 // API_BASE_URL is now in api.ts - keeping for backward compatibility
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
 export interface ApiError {
   message: string;
