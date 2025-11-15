@@ -222,7 +222,15 @@ export function WorkoutDiscovery() {
       </div>
 
       {/* Start Button */}
-      <div style={{ width: "100%", maxWidth: "400px" }}>
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "400px",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         <ShimmerButton variant="success" onClick={handleStart} type="button">
           Start Battle
         </ShimmerButton>

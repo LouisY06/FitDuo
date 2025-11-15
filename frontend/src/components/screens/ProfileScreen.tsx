@@ -117,6 +117,8 @@ export function ProfileScreen() {
           justifyContent: "center",
           minHeight: "calc(100vh - 200px)",
           color: "white",
+          padding: "4rem 2rem",
+          boxSizing: "border-box",
         }}
       >
         <CyanLoadingDots size="large" />

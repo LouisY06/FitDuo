@@ -38,8 +38,33 @@ export function AppShell() {
         position: "relative",
       }}
     >
+      {/* Blur Overlay */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(2, 6, 23, 0.3)",
+          backdropFilter: "blur(2px)",
+          WebkitBackdropFilter: "blur(2px)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
       {/* Content Area */}
-      <div style={{ flex: 1, overflow: "auto" }}>{renderContent()}</div>
+      <div
+        style={{
+          flex: 1,
+          overflow: "auto",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {renderContent()}
+      </div>
 
       {/* Bottom Navigation */}
       <BottomNav
