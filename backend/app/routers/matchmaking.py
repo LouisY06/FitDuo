@@ -63,6 +63,7 @@ async def join_queue(
     win_rate = player_stats.win_rate if player_stats else 0.0
     
     # Add player to queue
+    logger.info(f"Adding player {user.id} to matchmaking queue (level: {level}, xp: {experience_points}, win_rate: {win_rate}, exercise_id: {request.exercise_id})")
     added = await matchmaking_queue.add_player(
         player_id=user.id,
         user_id=user.id,  # For now, using same ID
@@ -74,13 +75,15 @@ async def join_queue(
     )
     
     if not added:
+        logger.warning(f"Player {user.id} already in queue")
         # Already in queue, return current status
         status = await matchmaking_queue.get_queue_status(user.id)
         return QueueStatusResponse(**status)
     
+    logger.info(f"Player {user.id} successfully added to queue")
     # Get queue status
     status = await matchmaking_queue.get_queue_status(user.id)
-    
+    logger.info(f"Queue status for player {user.id}: in_queue={status['in_queue']}, position={status['queue_position']}, size={len(matchmaking_queue.queue)}")
     return QueueStatusResponse(**status)
 
 
