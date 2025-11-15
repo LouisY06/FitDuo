@@ -157,16 +157,23 @@ export class MatchmakingWebSocket {
    * Handle incoming WebSocket messages
    */
   private handleMessage(message: any): void {
+    console.log("📨 Matchmaking WebSocket message received:", message);
     if (message.type === "MATCH_FOUND") {
       const payload: MatchFoundPayload = message.payload;
+      console.log("✅ Match found via WebSocket:", payload);
       if (this.onMatchFoundCallback) {
+        console.log("🎯 Calling onMatchFound callback");
         this.onMatchFoundCallback(payload);
+      } else {
+        console.warn("⚠️ No onMatchFound callback registered!");
       }
     } else if (message.type === "QUEUE_UPDATE") {
       // Handle queue position updates if needed
       console.log("Queue update:", message.payload);
     } else if (message.type === "MATCH_CANCELLED") {
       console.log("Match cancelled:", message.payload);
+    } else {
+      console.log("ℹ️ Unknown message type:", message.type);
     }
   }
 
