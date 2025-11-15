@@ -1,0 +1,203 @@
+/**
+ * React hook for matchmaking
+ * 
+ * Manages matchmaking state, queue operations, and WebSocket connections.
+ */
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  joinQueue,
+  leaveQueue,
+  getQueueStatus,
+  MatchmakingWebSocket,
+  type QueueStatus,
+  type MatchFoundPayload,
+} from "../services/matchmaking";
+import { getCurrentUser } from "../services/auth";
+
+export interface UseMatchmakingOptions {
+  onMatchFound?: (payload: MatchFoundPayload) => void;
+  autoConnect?: boolean;
+}
+
+export interface UseMatchmakingReturn {
+  // State
+  isSearching: boolean;
+  queueStatus: QueueStatus | null;
+  error: string | null;
+  loading: boolean;
+
+  // Actions
+  startSearching: (exerciseId?: number) => Promise<void>;
+  stopSearching: () => Promise<void>;
+  refreshStatus: () => Promise<void>;
+}
+
+export function useMatchmaking(
+  options: UseMatchmakingOptions = {}
+): UseMatchmakingReturn {
+  const { onMatchFound, autoConnect = false } = options;
+
+  const [isSearching, setIsSearching] = useState(false);
+  const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const wsRef = useRef<MatchmakingWebSocket | null>(null);
+  const playerIdRef = useRef<number | null>(null);
+
+  // Get current user ID
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user = await getCurrentUser();
+        // User object has id field from backend
+        if (user && (user.id || (user as any).user_id)) {
+          playerIdRef.current = (user.id || (user as any).user_id) as number;
+        }
+      } catch (err) {
+        console.error("Error fetching current user:", err);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  // Connect to matchmaking WebSocket when searching
+  useEffect(() => {
+    if (isSearching && playerIdRef.current && autoConnect) {
+      const ws = new MatchmakingWebSocket(playerIdRef.current);
+      wsRef.current = ws;
+
+      if (onMatchFound) {
+        ws.onMatchFound(onMatchFound);
+      } else {
+        // Default handler: log match found
+        ws.onMatchFound((payload) => {
+          console.log("Match found!", payload);
+        });
+      }
+
+      ws.connect().catch((err) => {
+        console.error("Failed to connect to matchmaking WebSocket:", err);
+        setError("Failed to connect to matchmaking service");
+      });
+
+      return () => {
+        ws.disconnect();
+        wsRef.current = null;
+      };
+    }
+  }, [isSearching, autoConnect, onMatchFound]);
+
+  // Start searching for a match
+  const startSearching = useCallback(async (exerciseId?: number) => {
+    try {
+      console.log("startSearching called", { exerciseId, playerId: playerIdRef.current });
+      setLoading(true);
+      setError(null);
+
+      if (!playerIdRef.current) {
+        // Try to get user ID again
+        try {
+          const user = await getCurrentUser();
+          if (user && (user.id || (user as any).user_id)) {
+            playerIdRef.current = (user.id || (user as any).user_id) as number;
+            console.log("Got player ID:", playerIdRef.current);
+          } else {
+            throw new Error("User ID not found");
+          }
+        } catch (err) {
+          console.error("Failed to get user ID:", err);
+          throw new Error("Please log in to start matchmaking");
+        }
+      }
+
+      console.log("Joining queue...");
+      const status = await joinQueue(exerciseId);
+      console.log("Queue status:", status);
+      setQueueStatus(status);
+      setIsSearching(true);
+
+      // Poll for queue status updates
+      const pollInterval = setInterval(async () => {
+        try {
+          const updatedStatus = await getQueueStatus();
+          setQueueStatus(updatedStatus);
+
+          // If no longer in queue, stop searching
+          if (!updatedStatus.in_queue) {
+            setIsSearching(false);
+            clearInterval(pollInterval);
+          }
+        } catch (err) {
+          console.error("Error polling queue status:", err);
+        }
+      }, 5000); // Poll every 5 seconds
+
+      // Store interval for cleanup
+      (startSearching as any).pollInterval = pollInterval;
+    } catch (err) {
+      const apiError = err as { message?: string };
+      setError(apiError.message || "Failed to join matchmaking queue");
+      setIsSearching(false);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Stop searching
+  const stopSearching = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      await leaveQueue();
+      setIsSearching(false);
+      setQueueStatus(null);
+
+      // Clear polling interval
+      if ((startSearching as any).pollInterval) {
+        clearInterval((startSearching as any).pollInterval);
+      }
+    } catch (err) {
+      const apiError = err as { message?: string };
+      setError(apiError.message || "Failed to leave matchmaking queue");
+    } finally {
+      setLoading(false);
+    }
+  }, [startSearching]);
+
+  // Refresh queue status
+  const refreshStatus = useCallback(async () => {
+    try {
+      const status = await getQueueStatus();
+      setQueueStatus(status);
+      setIsSearching(status.in_queue);
+    } catch (err) {
+      console.error("Error refreshing queue status:", err);
+    }
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.disconnect();
+      }
+      if ((startSearching as any).pollInterval) {
+        clearInterval((startSearching as any).pollInterval);
+      }
+    };
+  }, [startSearching]);
+
+  return {
+    isSearching,
+    queueStatus,
+    error,
+    loading,
+    startSearching,
+    stopSearching,
+    refreshStatus,
+  };
+}
+
