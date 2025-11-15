@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FaRunning, FaStopwatch, FaFistRaised, FaDumbbell, FaUser, FaSearch, FaFilter } from "react-icons/fa";
+import { FaRunning, FaStopwatch, FaFistRaised, FaDumbbell, FaUser, FaSearch } from "react-icons/fa";
 
 type WorkoutMode = {
   id: string;

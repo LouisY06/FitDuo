@@ -1,5 +1,5 @@
-import { useState, FormEvent } from "react";
-import { login, signUp, forgotPassword, type ApiError } from "../services/auth";
+import { useState, type FormEvent } from "react";
+import { login, signUp, forgotPassword, type ApiError } from "../../cv/auth";
 
 type ViewMode = "login" | "signup" | "forgot-password";
 
@@ -92,7 +92,7 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await signUp({
+      await signUp({
         email,
         password,
         username: username || email.split("@")[0],
