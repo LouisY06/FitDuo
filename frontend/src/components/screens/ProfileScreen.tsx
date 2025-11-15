@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getCurrentUser } from "../../services/auth";
+import { CyanLoadingDots } from "../CyanLoadingDots";
 
 interface UserProfile {
   id: number;
@@ -19,6 +20,7 @@ interface Match {
 
 export function ProfileScreen() {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalBattles: 0,
     winRate: 0,
@@ -34,6 +36,7 @@ export function ProfileScreen() {
 
   useEffect(() => {
     const loadProfile = async () => {
+      setIsLoading(true);
       try {
         const userData = await getCurrentUser();
         if (userData) {
@@ -90,6 +93,7 @@ export function ProfileScreen() {
           timeAgo: "3 days ago",
         },
       ]);
+      setIsLoading(false);
     };
 
     loadProfile();
@@ -103,6 +107,22 @@ export function ProfileScreen() {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "calc(100vh - 200px)",
+          color: "white",
+        }}
+      >
+        <CyanLoadingDots size="large" />
+      </div>
+    );
+  }
 
   return (
     <div

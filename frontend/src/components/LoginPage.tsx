@@ -612,8 +612,8 @@ export function LoginPage() {
                     position: "relative",
                     zIndex: 2,
                     display: "block",
-                    color: "#63ff00",
-                    textShadow: "0 1px 3px rgba(0, 0, 0, 0.4), 0 0 8px rgba(99, 255, 0, 0.3)",
+                    color: "white",
+                    textShadow: "0 1px 3px rgba(0, 0, 0, 0.4)",
                   }}
                 >
                   {viewMode === "login"

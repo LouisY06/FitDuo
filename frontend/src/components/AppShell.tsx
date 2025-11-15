@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BottomNavBar } from "./BottomNavBar";
+import { BottomNav } from "./BottomNav";
 import { WorkoutScreen } from "./screens/WorkoutScreen";
 import { TimeTrialsScreen } from "./screens/TimeTrialsScreen";
 import { BattleScreen } from "./screens/BattleScreen";
@@ -34,7 +34,7 @@ export function AppShell() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        paddingBottom: "120px", // Space for bottom nav
+        paddingBottom: "100px", // Space for bottom nav
         position: "relative",
       }}
     >
@@ -42,17 +42,11 @@ export function AppShell() {
       <div style={{ flex: 1, overflow: "auto" }}>{renderContent()}</div>
 
       {/* Bottom Navigation */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 100,
-        }}
-      >
-        <BottomNavBar activeTab={activeTab} onTabChange={setActiveTab} />
-      </div>
+      <BottomNav
+        activeItem={activeTab}
+        onItemClick={(key) => setActiveTab(key as Tab)}
+        fixed={true}
+      />
     </div>
   );
 }
