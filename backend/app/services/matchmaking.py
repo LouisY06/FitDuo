@@ -169,32 +169,11 @@ class MatchmakingQueue:
     
     def _calculate_match_score(self, player1: QueuedPlayer, player2: QueuedPlayer) -> float:
         """
-        Calculate match score between two players.
-        Lower score = better match.
-        
-        Factors:
-        - Level difference (closer levels = better)
-        - XP difference (closer XP = better)
-        - Win rate similarity (closer win rates = better)
+        Calculate match score between two players (DEPRECATED - not used for FIFO matching).
+        Kept for backward compatibility.
         """
-        # Level difference (weight: 5 points per level - reduced for easier matching)
-        level_diff = abs(player1.level - player2.level)
-        level_score = level_diff * 5
-        
-        # XP difference (weight: 0.5 point per 100 XP - reduced)
-        xp_diff = abs(player1.experience_points - player2.experience_points)
-        xp_score = xp_diff / 200  # Reduced weight
-        
-        # Win rate difference (weight: 50 points per 0.1 difference - reduced)
-        win_rate_diff = abs(player1.win_rate - player2.win_rate)
-        win_rate_score = win_rate_diff * 500  # Reduced weight
-        
-        # Combined score
-        total_score = level_score + xp_score + win_rate_score
-        
-        logger.debug(f"Match score: Player {player1.player_id} vs {player2.player_id} = {total_score:.2f} (level_diff: {level_diff}, xp_diff: {xp_diff}, win_rate_diff: {win_rate_diff:.3f})")
-        
-        return total_score
+        # No longer used - matching is now FIFO (first-come-first-serve)
+        return 0.0
     
     async def _try_match_all_players(self, session: Optional[Session] = None):
         """Try to match all players in the queue."""
