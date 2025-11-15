@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     openrouter_model: str = "anthropic/claude-3-haiku"  # Default cost-effective model
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     
-    # Firebase (will be configured later)
-    firebase_credentials: Optional[str] = None
+    # Firebase
+    firebase_credentials: Optional[str] = None  # Path to service account JSON file
     
     class Config:
         env_file = ".env"
