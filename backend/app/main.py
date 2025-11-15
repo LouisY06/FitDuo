@@ -4,6 +4,7 @@ from app.config import settings
 from app.database.connection import init_db
 from app.routers import exercise, match, websocket, llm, auth, player, matchmaking
 import os
+import logging
 
 app = FastAPI(
     title=settings.api_title,
@@ -24,6 +25,11 @@ app.add_middleware(
 async def startup_event():
     """Initialize database on startup"""
     init_db()
+    
+    # Log registered matchmaking routes
+    logger.info(f"✅ Matchmaking router registered with prefix: {matchmaking.router.prefix}")
+    matchmaking_routes = [r.path for r in matchmaking.router.routes if hasattr(r, 'path')]
+    logger.info(f"✅ Matchmaking routes: {matchmaking_routes}")
 
 
 # Include routers
@@ -34,6 +40,8 @@ app.include_router(llm.router)
 app.include_router(auth.router)
 app.include_router(player.router)
 app.include_router(matchmaking.router)
+
+logger = logging.getLogger(__name__)
 
 
 @app.get("/")
@@ -54,6 +62,24 @@ async def debug_cors():
         "cors_origins_raw": settings.cors_origins,
         "environment": settings.environment,
         "cors_origins_env": os.getenv("CORS_ORIGINS", "NOT SET"),
+    }
+
+
+@app.get("/debug/routes")
+async def debug_routes():
+    """Debug endpoint to list all registered routes"""
+    routes = []
+    for route in app.routes:
+        if hasattr(route, "path") and hasattr(route, "methods"):
+            routes.append({
+                "path": route.path,
+                "methods": list(route.methods) if route.methods else ["N/A"],
+                "name": getattr(route, "name", "unknown"),
+            })
+    return {
+        "total_routes": len(routes),
+        "routes": routes,
+        "matchmaking_routes": [r for r in routes if "matchmaking" in r["path"]],
     }
 
 
