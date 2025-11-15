@@ -39,7 +39,8 @@ class MatchmakingQueue:
         self.queue: Dict[int, QueuedPlayer] = {}  # player_id -> QueuedPlayer
         self.matchmaking_websockets: Dict[int, any] = {}  # player_id -> WebSocket
         self.lock = asyncio.Lock()
-        self.match_threshold = 100.0  # Maximum match score for a good match (increased for easier matching)
+        # Match threshold no longer used (FIFO matching)
+        self.match_threshold = 100.0  # Kept for backward compatibility but not used
         self.queue_timeout = timedelta(minutes=5)  # Remove stale players after 5 minutes
         self._matching_task: Optional[asyncio.Task] = None
         
@@ -145,7 +146,7 @@ class MatchmakingQueue:
         session: Optional[Session] = None
     ) -> Optional[Dict]:
         """
-        Try to find a match for a player.
+        Try to find a match for a player (first-come-first-serve).
         Returns match info if found, None otherwise.
         """
         if player_id not in self.queue:
@@ -153,48 +154,17 @@ class MatchmakingQueue:
         
         player = self.queue[player_id]
         
-        # Find best match
-        best_match = None
-        best_score = float('inf')
-        
+        # Find first available opponent (FIFO - first come first serve)
         for opponent_id, opponent in self.queue.items():
             if opponent_id == player_id:
                 continue
             
-            score = self._calculate_match_score(player, opponent)
-            
-            # Check if exercise preference matches (if specified)
-            exercise_match = True
-            if player.exercise_id and opponent.exercise_id:
-                exercise_match = player.exercise_id == opponent.exercise_id
-            elif player.exercise_id or opponent.exercise_id:
-                # If only one has preference, it's still a match
-                exercise_match = True
-            
-            # Consider it a match if score is good and exercises match
-            if score < best_score and exercise_match:
-                best_score = score
-                best_match = opponent
+            # Match immediately with first available opponent
+            logger.info(f"Match found! Player {player_id} vs Player {opponent_id} (FIFO matching)")
+            return await self._create_match(player, opponent, session)
         
-        # If we found a match, create the game session
-        # Lower threshold for easier matching (especially for new players)
-        effective_threshold = self.match_threshold
-        
-        # If no match found and we haven't expanded search, mark for expansion
-        if not player.search_range_expanded and best_score >= effective_threshold:
-            player.search_range_expanded = True
-            # Expand match threshold temporarily
-            effective_threshold = self.match_threshold * 2.0
-        
-        # Match if we have an opponent and score is acceptable
-        if best_match and best_score < effective_threshold:
-            logger.info(f"Match found! Player {player_id} vs Player {best_match.player_id} (score: {best_score:.2f}, threshold: {effective_threshold:.2f})")
-            return await self._create_match(player, best_match, session)
-        elif best_match:
-            logger.warning(f"No match yet for player {player_id}. Best score: {best_score:.2f} (threshold: {effective_threshold:.2f}) - score too high!")
-        else:
-            logger.info(f"No opponents found for player {player_id} (queue size: {len(self.queue)})")
-        
+        # No opponents available
+        logger.info(f"No opponents found for player {player_id} (queue size: {len(self.queue)})")
         return None
     
     def _calculate_match_score(self, player1: QueuedPlayer, player2: QueuedPlayer) -> float:
