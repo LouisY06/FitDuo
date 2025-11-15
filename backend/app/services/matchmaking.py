@@ -39,8 +39,9 @@ class MatchmakingQueue:
         self.queue: Dict[int, QueuedPlayer] = {}  # player_id -> QueuedPlayer
         self.matchmaking_websockets: Dict[int, any] = {}  # player_id -> WebSocket
         self.lock = asyncio.Lock()
-        self.match_threshold = 50.0  # Maximum match score for a good match
+        self.match_threshold = 100.0  # Maximum match score for a good match (increased for easier matching)
         self.queue_timeout = timedelta(minutes=5)  # Remove stale players after 5 minutes
+        self._matching_task: Optional[asyncio.Task] = None
         
     async def add_player(
         self,
@@ -72,7 +73,7 @@ class MatchmakingQueue:
             )
             
             self.queue[player_id] = queued_player
-            logger.info(f"Player {player_id} added to matchmaking queue")
+            logger.info(f"Player {player_id} added to matchmaking queue (total in queue: {len(self.queue)})")
             
             # Try to find a match immediately (async, don't wait)
             asyncio.create_task(self._try_match_and_notify(player_id, session))
@@ -211,6 +212,17 @@ class MatchmakingQueue:
         
         return total_score
     
+    async def _try_match_all_players(self, session: Optional[Session] = None):
+        """Try to match all players in the queue."""
+        async with self.lock:
+            player_ids = list(self.queue.keys())
+        
+        # Try matching each player
+        for player_id in player_ids:
+            if player_id in self.queue:  # Check still in queue
+                await self._try_match_and_notify(player_id, session)
+                await asyncio.sleep(0.1)  # Small delay between attempts
+    
     async def _create_match(
         self,
         player1: QueuedPlayer,
@@ -306,8 +318,11 @@ class MatchmakingQueue:
                     "type": "MATCH_FOUND",
                     "payload": match_info,
                 })
+                logger.info(f"Match notification sent to player {player_id}")
             except Exception as e:
                 logger.error(f"Error sending match notification to player {player_id}: {e}")
+        else:
+            logger.warning(f"Player {player_id} not connected to matchmaking WebSocket (has {len(self.matchmaking_websockets)} connections)")
 
 
 # Global matchmaking queue instance
