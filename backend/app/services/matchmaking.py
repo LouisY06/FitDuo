@@ -205,20 +205,22 @@ class MatchmakingQueue:
         - XP difference (closer XP = better)
         - Win rate similarity (closer win rates = better)
         """
-        # Level difference (weight: 10 points per level)
+        # Level difference (weight: 5 points per level - reduced for easier matching)
         level_diff = abs(player1.level - player2.level)
-        level_score = level_diff * 10
+        level_score = level_diff * 5
         
-        # XP difference (weight: 1 point per 100 XP)
+        # XP difference (weight: 0.5 point per 100 XP - reduced)
         xp_diff = abs(player1.experience_points - player2.experience_points)
-        xp_score = xp_diff / 100
+        xp_score = xp_diff / 200  # Reduced weight
         
-        # Win rate difference (weight: 100 points per 0.1 difference)
+        # Win rate difference (weight: 50 points per 0.1 difference - reduced)
         win_rate_diff = abs(player1.win_rate - player2.win_rate)
-        win_rate_score = win_rate_diff * 1000
+        win_rate_score = win_rate_diff * 500  # Reduced weight
         
         # Combined score
         total_score = level_score + xp_score + win_rate_score
+        
+        logger.debug(f"Match score: Player {player1.player_id} vs {player2.player_id} = {total_score:.2f} (level_diff: {level_diff}, xp_diff: {xp_diff}, win_rate_diff: {win_rate_diff:.3f})")
         
         return total_score
     
@@ -228,10 +230,13 @@ class MatchmakingQueue:
             player_ids = list(self.queue.keys())
         
         # Try matching each player
-        for player_id in player_ids:
-            if player_id in self.queue:  # Check still in queue
-                await self._try_match_and_notify(player_id, session)
-                await asyncio.sleep(0.1)  # Small delay between attempts
+        # Only try first player to avoid duplicate matches
+        if len(player_ids) >= 2:
+            first_player = player_ids[0]
+            if first_player in self.queue:  # Check still in queue
+                logger.info(f"Trying to match all players in queue (size: {len(player_ids)})")
+                await self._try_match_and_notify(first_player, session)
+                await asyncio.sleep(0.5)  # Small delay
     
     async def _create_match(
         self,
