@@ -39,7 +39,7 @@ export async function joinQueue(
       request.exercise_id = exerciseId;
     }
     console.log("joinQueue called with:", request);
-    const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
     console.log("API URL:", API_BASE_URL);
     const result = await apiPost<QueueStatus>("/api/matchmaking/queue", request);
     console.log("joinQueue result:", result);
@@ -95,7 +95,7 @@ export class MatchmakingWebSocket {
    */
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
       const wsUrl = apiUrl.replace("http://", "ws://").replace("https://", "wss://");
       const url = `${wsUrl}/api/matchmaking/ws/${this.playerId}`;
 
