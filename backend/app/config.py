@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     # Can be set via CORS_ORIGINS env var (comma-separated)
     cors_origins: list[str] = [
         "http://localhost:5173",  # Vite default
+        "http://localhost:5174",  # Vite alternative port
         "http://localhost:3000",  # Alternative dev port
         "http://localhost:8080",  # Alternative dev port
     ]
