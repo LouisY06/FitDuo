@@ -502,47 +502,114 @@ export function LoginPage() {
             </div>
           )}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
+          {/* Submit Button - Glassy Effect */}
+          <div
             style={{
+              position: "relative",
               width: "100%",
-              padding: "1rem",
-              borderRadius: "50px",
-              border: "none",
-              background: isLoading
-                ? "rgba(99, 255, 0, 0.5)"
-                : "linear-gradient(135deg, #63ff00 0%, #52d700 100%)",
-              color: "#202428",
-              fontFamily: "Audiowide, sans-serif",
-              fontWeight: 400,
-              fontSize: "1rem",
-              cursor: isLoading ? "not-allowed" : "pointer",
               marginTop: "0.5rem",
-              boxShadow: "0 4px 20px rgba(99, 255, 0, 0.3)",
-              transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              // Outer glow
+              filter: isLoading ? "none" : "drop-shadow(0 4px 20px rgba(99, 255, 0, 0.15)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2))",
+              transition: "transform 0.2s ease, filter 0.2s ease",
               opacity: isLoading ? 0.7 : 1,
             }}
             onMouseEnter={(e) => {
               if (!isLoading) {
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 6px 25px rgba(99, 255, 0, 0.4)";
+                e.currentTarget.style.filter =
+                  "drop-shadow(0 6px 28px rgba(99, 255, 0, 0.25)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25))";
               }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 4px 20px rgba(99, 255, 0, 0.3)";
+              e.currentTarget.style.filter = isLoading
+                ? "none"
+                : "drop-shadow(0 4px 20px rgba(99, 255, 0, 0.15)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2))";
             }}
           >
-            {isLoading
-              ? "Loading..."
-              : viewMode === "login"
-              ? "Sign In"
-              : viewMode === "signup"
-              ? "Sign Up"
-              : "Send Reset Email"}
-          </button>
+            {/* Border layer - gradient border wrapper */}
+            {!isLoading && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "-1px",
+                  left: "-1px",
+                  right: "-1px",
+                  bottom: "-1px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(99, 255, 0, 0.8) 30%, rgba(99, 255, 0, 0.9) 50%, rgba(99, 255, 0, 0.8) 70%, rgba(255, 255, 255, 0.4) 100%)",
+                  zIndex: 0,
+                  pointerEvents: "none",
+                }}
+              />
+            )}
+
+            {/* Fill layer - main glassy button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              style={{
+                position: "relative",
+                width: "100%",
+                padding: "1rem",
+                borderRadius: "12px",
+                border: "none",
+                fontFamily: "Audiowide, sans-serif",
+                fontWeight: 400,
+                fontSize: "1rem",
+                cursor: isLoading ? "not-allowed" : "pointer",
+                overflow: "hidden",
+                // Glassy fill with gradient
+                background: isLoading
+                  ? "rgba(99, 255, 0, 0.1)"
+                  : "linear-gradient(135deg, rgba(99, 255, 0, 0.12) 0%, rgba(82, 215, 0, 0.08) 50%, rgba(99, 255, 0, 0.1) 100%)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                // Cover the border gradient inside
+                margin: !isLoading ? "1px" : "0",
+                // Inner shadows for depth
+                boxShadow: isLoading
+                  ? "inset 0 2px 4px rgba(0, 0, 0, 0.2)"
+                  : "inset 0 1px 2px rgba(255, 255, 255, 0.3), inset 0 -1px 2px rgba(0, 0, 0, 0.2), inset 0 0 20px rgba(99, 255, 0, 0.05)",
+                zIndex: 1,
+              }}
+            >
+              {/* Reflection layer - white highlight on bottom half */}
+              {!isLoading && (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: "60%",
+                    background: "linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.08) 40%, rgba(255, 255, 255, 0.12) 100%)",
+                    pointerEvents: "none",
+                    borderRadius: "0 0 11px 11px",
+                  }}
+                />
+              )}
+
+              {/* Button text */}
+              <span
+                style={{
+                  position: "relative",
+                  zIndex: 2,
+                  display: "block",
+                  color: isLoading ? "rgba(255, 255, 255, 0.6)" : "#63ff00",
+                  textShadow: isLoading ? "none" : "0 1px 3px rgba(0, 0, 0, 0.4), 0 0 8px rgba(99, 255, 0, 0.3)",
+                }}
+              >
+                {isLoading
+                  ? "Loading..."
+                  : viewMode === "login"
+                  ? "Sign In"
+                  : viewMode === "signup"
+                  ? "Sign Up"
+                  : "Send Reset Email"}
+              </span>
+            </button>
+          </div>
         </form>
 
         {/* Divider */}
