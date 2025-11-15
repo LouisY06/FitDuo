@@ -3,13 +3,17 @@
 ## Instructions
 
 1. Place your Firebase service account JSON file in this directory
-2. Name it: `firebase-credentials.json`
-3. The file will be automatically loaded by the application
+2. The file name should match your Firebase project (e.g., `fitduo-830b3-firebase-adminsdk-fbsvc-5dfdb41c47.json`)
+3. Add the path to your `.env` file in the backend directory:
+
+```
+FIREBASE_CREDENTIALS=config/fitduo-830b3-firebase-adminsdk-fbsvc-5dfdb41c47.json
+```
 
 ## File Location
 
 ```
-backend/config/firebase-credentials.json
+backend/config/fitduo-830b3-firebase-adminsdk-fbsvc-5dfdb41c47.json
 ```
 
 ## Security
