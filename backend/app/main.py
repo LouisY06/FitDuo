@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database.connection import init_db
-from app.routers import exercise, match, websocket, llm, auth
+from app.routers import exercise, match, websocket, llm, auth, player
 
 app = FastAPI(
     title=settings.api_title,
@@ -31,6 +31,7 @@ app.include_router(match.router)
 app.include_router(websocket.router)
 app.include_router(llm.router)
 app.include_router(auth.router)
+app.include_router(player.router)
 
 
 @app.get("/")

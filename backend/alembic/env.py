@@ -7,7 +7,14 @@ from alembic import context
 from sqlmodel import SQLModel
 
 # Import all models so Alembic can detect them
-from app.models import User, Exercise, GameSession
+from app.models import (
+    User,
+    Exercise,
+    GameSession,
+    PlayerStats,
+    PlayerWorkout,
+    PlayerPreferences,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
