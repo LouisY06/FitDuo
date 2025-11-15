@@ -38,7 +38,10 @@ export async function apiRequest<T>(
     } as ApiError;
   }
 
-  const url = endpoint.startsWith("http") ? endpoint : `${API_BASE_URL}${endpoint}`;
+  // Normalize URL - remove trailing slash from base URL and leading slash from endpoint
+  const baseUrl = API_BASE_URL.replace(/\/$/, ""); // Remove trailing slash
+  const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = endpoint.startsWith("http") ? endpoint : `${baseUrl}${normalizedEndpoint}`;
   
   const response = await fetch(url, {
     ...options,
