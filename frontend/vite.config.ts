@@ -11,4 +11,10 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'unsafe-none',
     },
   },
+  optimizeDeps: {
+    include: ['firebase/app', 'firebase/auth', 'firebase/analytics'],
+  },
+  resolve: {
+    preserveSymlinks: false,
+  },
 })

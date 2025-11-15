@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { login, signUp, forgotPassword, signInWithGoogle, type ApiError } from "../services/auth";
+import { CyanLoadingDots } from "./CyanLoadingDots";
 
 type ViewMode = "login" | "signup" | "forgot-password";
 
 export function LoginPage() {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,9 +53,9 @@ export function LoginPage() {
       if (response.token) {
         localStorage.setItem("auth_token", response.token);
       }
-      // Navigate to workout discovery (you can replace this with router navigation)
+      // Navigate to battle pass page
       setTimeout(() => {
-        window.location.href = "/discover";
+        navigate("/discover");
       }, 1000);
     } catch (err) {
       const apiError = err as ApiError;
@@ -591,23 +594,35 @@ export function LoginPage() {
               )}
 
               {/* Button text */}
-              <span
-                style={{
-                  position: "relative",
-                  zIndex: 2,
-                  display: "block",
-                  color: isLoading ? "rgba(255, 255, 255, 0.6)" : "#63ff00",
-                  textShadow: isLoading ? "none" : "0 1px 3px rgba(0, 0, 0, 0.4), 0 0 8px rgba(99, 255, 0, 0.3)",
-                }}
-              >
-                {isLoading
-                  ? "Loading..."
-                  : viewMode === "login"
-                  ? "Sign In"
-                  : viewMode === "signup"
-                  ? "Sign Up"
-                  : "Send Reset Email"}
-              </span>
+              {isLoading ? (
+                <div
+                  style={{
+                    position: "relative",
+                    zIndex: 2,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <CyanLoadingDots size="small" />
+                </div>
+              ) : (
+                <span
+                  style={{
+                    position: "relative",
+                    zIndex: 2,
+                    display: "block",
+                    color: "#63ff00",
+                    textShadow: "0 1px 3px rgba(0, 0, 0, 0.4), 0 0 8px rgba(99, 255, 0, 0.3)",
+                  }}
+                >
+                  {viewMode === "login"
+                    ? "Sign In"
+                    : viewMode === "signup"
+                    ? "Sign Up"
+                    : "Send Reset Email"}
+                </span>
+              )}
             </button>
           </div>
         </form>

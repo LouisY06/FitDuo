@@ -1,4 +1,9 @@
-export function BottomNavBar() {
+type BottomNavBarProps = {
+  activeTab?: "workout" | "time" | "battle" | "coach" | "profile";
+  onTabChange?: (tab: "workout" | "time" | "battle" | "coach" | "profile") => void;
+};
+
+export function BottomNavBar({ activeTab = "battle", onTabChange }: BottomNavBarProps) {
   return (
     <div
       style={{
@@ -16,19 +21,22 @@ export function BottomNavBar() {
     >
       {/* Yellow Battle Button - Overlapping */}
       <div
+        onClick={() => onTabChange?.("battle")}
         style={{
           width: "64px",
           height: "64px",
           borderRadius: "50%",
-          backgroundColor: "#FFD700",
+          backgroundColor: activeTab === "battle" ? "#FFD700" : "#FFD700",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           marginBottom: "-32px",
           zIndex: 101,
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.3)",
+          boxShadow: activeTab === "battle" ? "0 4px 20px rgba(255, 215, 0, 0.6)" : "0 4px 12px rgba(0, 0, 0, 0.3)",
           border: "3px solid white",
           cursor: "pointer",
+          transition: "all 0.2s ease",
+          transform: activeTab === "battle" ? "scale(1.1)" : "scale(1)",
         }}
         title="Matchmaking Battle Mode - Get paired with a live rival for real-time, computer-vision–refereed exercise battles"
       >
@@ -66,12 +74,14 @@ export function BottomNavBar() {
         </svg>
       </div>
 
-      {/* White Navigation Bar */}
+      {/* Dark Glass Navigation Bar */}
       <div
         style={{
           width: "calc(100% - 40px)",
           maxWidth: "335px",
-          backgroundColor: "white",
+          backgroundColor: "rgba(17, 24, 39, 0.95)",
+          backdropFilter: "blur(20px)",
+          border: "1px solid rgba(99, 255, 0, 0.2)",
           borderRadius: "30px 30px 20px 20px",
           paddingTop: "40px",
           paddingBottom: "12px",
@@ -80,17 +90,21 @@ export function BottomNavBar() {
           display: "flex",
           justifyContent: "space-around",
           alignItems: "center",
-          boxShadow: "0 -2px 10px rgba(0, 0, 0, 0.1)",
+          boxShadow: "0 -2px 20px rgba(0, 0, 0, 0.5)",
         }}
       >
         {/* Running Icon - General Workout Mode */}
         <div
+          onClick={() => onTabChange?.("workout")}
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: "4px",
             cursor: "pointer",
+            opacity: activeTab === "workout" ? 1 : 0.6,
+            transform: activeTab === "workout" ? "scale(1.1)" : "scale(1)",
+            transition: "all 0.2s ease",
           }}
           title="General Workout Mode - Standard exercise sessions, warm-ups, and cardio routines"
         >
@@ -99,12 +113,16 @@ export function BottomNavBar() {
 
         {/* Stopwatch Icon - Time Trials Mode */}
         <div
+          onClick={() => onTabChange?.("time")}
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: "4px",
             cursor: "pointer",
+            opacity: activeTab === "time" ? 1 : 0.6,
+            transform: activeTab === "time" ? "scale(1.1)" : "scale(1)",
+            transition: "all 0.2s ease",
           }}
           title="Time Trials Mode - Compete against the clock to complete as many high-quality reps as possible"
         >
@@ -116,12 +134,16 @@ export function BottomNavBar() {
 
         {/* Dumbbell Icon - AI Training Agent */}
         <div
+          onClick={() => onTabChange?.("coach")}
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: "4px",
             cursor: "pointer",
+            opacity: activeTab === "coach" ? 1 : 0.6,
+            transform: activeTab === "coach" ? "scale(1.1)" : "scale(1)",
+            transition: "all 0.2s ease",
           }}
           title="AI Training Agent - Analyzes your form, gives feedback, and helps you improve stats across different exercises"
         >
@@ -130,12 +152,16 @@ export function BottomNavBar() {
 
         {/* Profile Icon */}
         <div
+          onClick={() => onTabChange?.("profile")}
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: "4px",
             cursor: "pointer",
+            opacity: activeTab === "profile" ? 1 : 0.6,
+            transform: activeTab === "profile" ? "scale(1.1)" : "scale(1)",
+            transition: "all 0.2s ease",
           }}
           title="Profile - Match history, performance breakdowns, rankings, and personal settings"
         >
@@ -148,7 +174,7 @@ export function BottomNavBar() {
         style={{
           width: "134px",
           height: "5px",
-          backgroundColor: "rgba(0, 0, 0, 0.3)",
+          backgroundColor: "rgba(255, 255, 255, 0.3)",
           borderRadius: "3px",
           marginTop: "8px",
         }}

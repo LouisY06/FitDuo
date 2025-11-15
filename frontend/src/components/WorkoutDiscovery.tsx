@@ -1,90 +1,77 @@
-import { useState } from "react";
-import { FaRunning, FaStopwatch, FaFistRaised, FaDumbbell, FaUser, FaSearch } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import { ShimmerButton } from "./ShimmerComponents";
+import { FaTrophy, FaMedal, FaCrown, FaFire } from "react-icons/fa";
 
-type WorkoutMode = {
-  id: string;
-  name: string;
-  description: string;
+type BattlePassTier = {
+  level: number;
+  reward: string;
   icon: React.ReactNode;
-  category: string;
-  difficulty: number;
-  featured?: boolean;
+  unlocked: boolean;
 };
 
-const workoutModes: WorkoutMode[] = [
+const battlePassTiers: BattlePassTier[] = [
   {
-    id: "general",
-    name: "General Workout",
-    description: "Standard exercise sessions, warm-ups, and cardio routines",
-    icon: <FaRunning size={32} />,
-    category: "Training",
-    difficulty: 2,
+    level: 1,
+    reward: "Starter Badge",
+    icon: <FaMedal size={24} />,
+    unlocked: true,
   },
   {
-    id: "time-trials",
-    name: "Time Trials",
-    description: "Compete against the clock for speed-based challenges",
-    icon: <FaStopwatch size={32} />,
-    category: "Competition",
-    difficulty: 3,
+    level: 5,
+    reward: "Warrior Title",
+    icon: <FaTrophy size={24} />,
+    unlocked: false,
   },
   {
-    id: "battle",
-    name: "Battle Mode",
-    description: "Real-time battles with live rivals and AI refereeing",
-    icon: <FaFistRaised size={32} />,
-    category: "Battle",
-    difficulty: 4,
-    featured: true,
+    level: 10,
+    reward: "Elite Status",
+    icon: <FaCrown size={24} />,
+    unlocked: false,
   },
   {
-    id: "ai-training",
-    name: "AI Training",
-    description: "Form analysis and personalized feedback",
-    icon: <FaDumbbell size={32} />,
-    category: "Training",
-    difficulty: 2,
+    level: 15,
+    reward: "Legendary Skin",
+    icon: <FaFire size={24} />,
+    unlocked: false,
   },
 ];
 
 export function WorkoutDiscovery() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const categories = Array.from(new Set(workoutModes.map((m) => m.category)));
-
-  const filteredModes = workoutModes.filter((mode) => {
-    const matchesSearch =
-      mode.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mode.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || mode.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const handleStart = () => {
+    // Navigate to main app with bottom nav
+    navigate("/app");
+  };
 
   return (
     <div
       style={{
         minHeight: "100vh",
-        padding: "2rem",
-        paddingBottom: "6rem",
+        padding: "2rem 1.5rem",
         color: "white",
-        maxWidth: "1400px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        maxWidth: "1200px",
         margin: "0 auto",
       }}
     >
       {/* Header */}
       <div
         style={{
-          marginBottom: "2.5rem",
+          textAlign: "center",
+          marginBottom: "3rem",
         }}
       >
         <h1
           className="audiowide-regular"
           style={{
-            fontSize: "clamp(2rem, 4vw, 3rem)",
+            fontSize: "clamp(2.5rem, 6vw, 4rem)",
             fontWeight: 400,
             margin: 0,
-            marginBottom: "0.5rem",
+            marginBottom: "1rem",
             background: "linear-gradient(135deg, #63ff00 0%, #ffffff 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
@@ -92,431 +79,166 @@ export function WorkoutDiscovery() {
             letterSpacing: "-0.02em",
           }}
         >
-          Discover Workouts
+          Battle Pass
         </h1>
-        <p style={{ fontSize: "1rem", opacity: 0.8, margin: 0, color: "white" }}>
-          Choose your challenge and dominate the arena
+        <p style={{ fontSize: "clamp(1rem, 2vw, 1.25rem)", opacity: 0.9, margin: 0 }}>
+          Unlock rewards as you compete and dominate the arena
         </p>
       </div>
 
-      {/* Search and Filter Bar */}
+      {/* Battle Pass Tiers */}
       <div
         style={{
-          display: "flex",
-          gap: "1rem",
-          marginBottom: "2rem",
-          flexWrap: "wrap",
-          alignItems: "center",
+          width: "100%",
+          maxWidth: "800px",
+          marginBottom: "3rem",
         }}
       >
-        {/* Search Bar */}
         <div
           style={{
-            flex: "1",
-            minWidth: "300px",
-            position: "relative",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: "1.5rem",
+            marginBottom: "2rem",
           }}
         >
-          <FaSearch
-            style={{
-              position: "absolute",
-              left: "1rem",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "rgba(255, 255, 255, 0.5)",
-              fontSize: "1rem",
-            }}
-          />
-          <input
-            type="text"
-            placeholder="Search workouts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "0.875rem 1rem 0.875rem 2.75rem",
-              borderRadius: "12px",
-              border: "1px solid rgba(99, 255, 0, 0.3)",
-              background: "rgba(0, 0, 0, 0.4)",
-              backdropFilter: "blur(10px)",
-              color: "white",
-              fontSize: "1rem",
-              fontFamily: "inherit",
-              outline: "none",
-              transition: "border-color 0.3s ease",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "rgba(99, 255, 0, 0.6)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "rgba(99, 255, 0, 0.3)";
-            }}
-          />
-        </div>
-
-        {/* Category Filter */}
-        <div
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            flexWrap: "wrap",
-          }}
-        >
-          <button
-            onClick={() => setSelectedCategory(null)}
-            style={{
-              padding: "0.875rem 1.25rem",
-              borderRadius: "12px",
-              border: selectedCategory === null ? "2px solid #63ff00" : "1px solid rgba(99, 255, 0, 0.3)",
-              background:
-                selectedCategory === null
-                  ? "rgba(99, 255, 0, 0.15)"
-                  : "rgba(0, 0, 0, 0.4)",
-              backdropFilter: "blur(10px)",
-              color: selectedCategory === null ? "#63ff00" : "white",
-              fontFamily: "Audiowide, sans-serif",
-              fontSize: "0.9rem",
-              fontWeight: 400,
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-            }}
-          >
-            All
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
+          {battlePassTiers.map((tier) => (
+            <div
+              key={tier.level}
               style={{
-                padding: "0.875rem 1.25rem",
-                borderRadius: "12px",
-                border: selectedCategory === category ? "2px solid #63ff00" : "1px solid rgba(99, 255, 0, 0.3)",
-                background:
-                  selectedCategory === category
-                    ? "rgba(99, 255, 0, 0.15)"
-                    : "rgba(0, 0, 0, 0.4)",
+                backgroundColor: tier.unlocked
+                  ? "rgba(99, 255, 0, 0.1)"
+                  : "rgba(255, 255, 255, 0.05)",
                 backdropFilter: "blur(10px)",
-                color: selectedCategory === category ? "#63ff00" : "white",
-                fontFamily: "Audiowide, sans-serif",
-                fontSize: "0.9rem",
-                fontWeight: 400,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
+                borderRadius: "20px",
+                padding: "1.5rem",
+                border: tier.unlocked
+                  ? "1px solid rgba(99, 255, 0, 0.5)"
+                  : "1px solid rgba(99, 255, 0, 0.2)",
+                textAlign: "center",
+                opacity: tier.unlocked ? 1 : 0.6,
+                boxShadow: tier.unlocked
+                  ? "0 8px 32px rgba(99, 255, 0, 0.2)"
+                  : "0 8px 32px rgba(0, 0, 0, 0.3)",
               }}
             >
-              {category}
-            </button>
+              <div
+                style={{
+                  fontSize: "2.5rem",
+                  marginBottom: "1rem",
+                  color: tier.unlocked ? "#63ff00" : "rgba(255, 255, 255, 0.5)",
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                {tier.icon}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  marginBottom: "0.5rem",
+                  color: tier.unlocked ? "#63ff00" : "rgba(255, 255, 255, 0.8)",
+                }}
+              >
+                Level {tier.level}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  opacity: 0.8,
+                }}
+              >
+                {tier.reward}
+              </div>
+              {tier.unlocked && (
+                <div
+                  style={{
+                    marginTop: "0.75rem",
+                    fontSize: "0.7rem",
+                    color: "#63ff00",
+                    fontFamily: "Audiowide, sans-serif",
+                  }}
+                >
+                  ✓ UNLOCKED
+                </div>
+              )}
+            </div>
           ))}
         </div>
-      </div>
 
-      {/* Workout Cards Grid */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-          gap: "1.5rem",
-          marginBottom: "2rem",
-        }}
-      >
-        {filteredModes.map((mode) => (
+        {/* Progress Bar */}
+        <div
+          style={{
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            backdropFilter: "blur(10px)",
+            borderRadius: "20px",
+            padding: "1.5rem",
+            border: "1px solid rgba(99, 255, 0, 0.2)",
+            marginBottom: "2rem",
+          }}
+        >
           <div
-            key={mode.id}
-            onClick={() => {
-              // Handle workout mode selection
-              console.log("Selected:", mode.id);
-            }}
             style={{
-              backgroundColor: mode.featured
-                ? "rgba(99, 255, 0, 0.1)"
-                : "rgba(255, 255, 255, 0.05)",
-              backdropFilter: "blur(10px)",
-              borderRadius: "20px",
-              padding: "2rem",
-              border: mode.featured
-                ? "2px solid rgba(99, 255, 0, 0.5)"
-                : "1px solid rgba(99, 255, 0, 0.2)",
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-              position: "relative",
-              overflow: "hidden",
-              boxShadow: mode.featured
-                ? "0 0 30px rgba(99, 255, 0, 0.2)"
-                : "none",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-8px)";
-              e.currentTarget.style.borderColor = mode.featured
-                ? "rgba(99, 255, 0, 0.8)"
-                : "rgba(99, 255, 0, 0.5)";
-              e.currentTarget.style.boxShadow = mode.featured
-                ? "0 0 40px rgba(99, 255, 0, 0.4)"
-                : "0 8px 32px rgba(99, 255, 0, 0.2)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.borderColor = mode.featured
-                ? "rgba(99, 255, 0, 0.5)"
-                : "rgba(99, 255, 0, 0.2)";
-              e.currentTarget.style.boxShadow = mode.featured
-                ? "0 0 30px rgba(99, 255, 0, 0.2)"
-                : "none";
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "0.75rem",
+              fontSize: "0.875rem",
             }}
           >
-            {/* Featured Badge */}
-            {mode.featured && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "1rem",
-                  right: "1rem",
-                  padding: "0.25rem 0.75rem",
-                  borderRadius: "12px",
-                  background: "rgba(99, 255, 0, 0.2)",
-                  border: "1px solid rgba(99, 255, 0, 0.5)",
-                  fontSize: "0.75rem",
-                  fontFamily: "Audiowide, sans-serif",
-                  color: "#63ff00",
-                  fontWeight: 400,
-                }}
-              >
-                FEATURED
-              </div>
-            )}
-
-            {/* Icon */}
-            <div
-              style={{
-                fontSize: "3rem",
-                marginBottom: "1.5rem",
-                color: mode.featured ? "#63ff00" : "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {mode.icon}
-            </div>
-
-            {/* Name */}
-            <h3
-              className="audiowide-regular"
-              style={{
-                fontSize: "1.5rem",
-                fontWeight: 400,
-                margin: 0,
-                marginBottom: "0.75rem",
-                color: mode.featured ? "#63ff00" : "white",
-              }}
-            >
-              {mode.name}
-            </h3>
-
-            {/* Description */}
-            <p
-              style={{
-                fontSize: "0.95rem",
-                opacity: 0.85,
-                margin: 0,
-                marginBottom: "1.25rem",
-                lineHeight: 1.6,
-                color: "white",
-              }}
-            >
-              {mode.description}
-            </p>
-
-            {/* Footer Info */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                paddingTop: "1rem",
-                borderTop: "1px solid rgba(99, 255, 0, 0.2)",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "0.85rem",
-                  opacity: 0.7,
-                  fontFamily: "Audiowide, sans-serif",
-                }}
-              >
-                {mode.category}
-              </span>
-              <div
-                style={{
-                  display: "flex",
-                  gap: "0.25rem",
-                }}
-              >
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      backgroundColor:
-                        i < mode.difficulty
-                          ? mode.featured
-                            ? "#63ff00"
-                            : "rgba(99, 255, 0, 0.6)"
-                          : "rgba(255, 255, 255, 0.2)",
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
+            <span>Current Level: 1</span>
+            <span style={{ color: "#63ff00" }}>Next: Level 5</span>
           </div>
-        ))}
-      </div>
-
-      {/* Bottom Navigation (Desktop-friendly) */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: "rgba(32, 36, 40, 0.95)",
-          backdropFilter: "blur(20px)",
-          borderTop: "1px solid rgba(99, 255, 0, 0.2)",
-          padding: "1rem 2rem",
-          display: "flex",
-          justifyContent: "center",
-          gap: "3rem",
-        }}
-      >
-        <button
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "0.5rem",
-            background: "transparent",
-            border: "none",
-            color: "rgba(255, 255, 255, 0.6)",
-            cursor: "pointer",
-            transition: "color 0.2s ease",
-            padding: "0.5rem 1rem",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#63ff00";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "rgba(255, 255, 255, 0.6)";
-          }}
-        >
-          <FaRunning size={20} />
-          <span style={{ fontSize: "0.75rem", fontFamily: "Audiowide, sans-serif" }}>Workouts</span>
-        </button>
-
-        <button
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "0.5rem",
-            background: "transparent",
-            border: "none",
-            color: "rgba(255, 255, 255, 0.6)",
-            cursor: "pointer",
-            transition: "color 0.2s ease",
-            padding: "0.5rem 1rem",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#63ff00";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "rgba(255, 255, 255, 0.6)";
-          }}
-        >
-          <FaFistRaised size={20} />
-          <span style={{ fontSize: "0.75rem", fontFamily: "Audiowide, sans-serif" }}>Battle</span>
-        </button>
-
-        <button
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "0.5rem",
-            background: "transparent",
-            border: "none",
-            color: "#63ff00",
-            cursor: "pointer",
-            transition: "color 0.2s ease",
-            padding: "0.5rem 1rem",
-            position: "relative",
-          }}
-        >
           <div
             style={{
-              position: "absolute",
-              bottom: "0",
-              left: "50%",
-              transform: "translateX(-50%)",
-              width: "40px",
-              height: "3px",
-              background: "#63ff00",
-              borderRadius: "2px",
+              width: "100%",
+              height: "12px",
+              backgroundColor: "rgba(99, 255, 0, 0.2)",
+              borderRadius: "6px",
+              overflow: "hidden",
             }}
-          />
-          <FaSearch size={20} />
-          <span style={{ fontSize: "0.75rem", fontFamily: "Audiowide, sans-serif" }}>Discover</span>
-        </button>
-
-        <button
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "0.5rem",
-            background: "transparent",
-            border: "none",
-            color: "rgba(255, 255, 255, 0.6)",
-            cursor: "pointer",
-            transition: "color 0.2s ease",
-            padding: "0.5rem 1rem",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#63ff00";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "rgba(255, 255, 255, 0.6)";
-          }}
-        >
-          <FaDumbbell size={20} />
-          <span style={{ fontSize: "0.75rem", fontFamily: "Audiowide, sans-serif" }}>Training</span>
-        </button>
-
-        <button
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "0.5rem",
-            background: "transparent",
-            border: "none",
-            color: "rgba(255, 255, 255, 0.6)",
-            cursor: "pointer",
-            transition: "color 0.2s ease",
-            padding: "0.5rem 1rem",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#63ff00";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "rgba(255, 255, 255, 0.6)";
-          }}
-        >
-          <FaUser size={20} />
-          <span style={{ fontSize: "0.75rem", fontFamily: "Audiowide, sans-serif" }}>Profile</span>
-        </button>
+          >
+            <div
+              style={{
+                width: "25%",
+                height: "100%",
+                background: "linear-gradient(90deg, #63ff00, #52d700)",
+                borderRadius: "6px",
+                boxShadow: "0 0 10px rgba(99, 255, 0, 0.5)",
+              }}
+            />
+          </div>
+          <div
+            style={{
+              marginTop: "0.5rem",
+              fontSize: "0.75rem",
+              opacity: 0.8,
+              textAlign: "center",
+            }}
+          >
+            250 / 1000 XP to next level
+          </div>
+        </div>
       </div>
+
+      {/* Start Button */}
+      <div style={{ width: "100%", maxWidth: "400px" }}>
+        <ShimmerButton variant="success" onClick={handleStart} type="button">
+          Start Battle
+        </ShimmerButton>
+      </div>
+
+      {/* Info Text */}
+      <p
+        style={{
+          marginTop: "2rem",
+          fontSize: "0.875rem",
+          opacity: 0.7,
+          textAlign: "center",
+        }}
+      >
+        Complete battles and challenges to unlock exclusive rewards
+      </p>
     </div>
   );
 }
-
