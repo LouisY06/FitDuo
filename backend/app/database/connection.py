@@ -3,6 +3,7 @@ from app.config import settings
 from typing import Generator
 
 # Use SQLite for local development/testing, PostgreSQL for production
+# Railway provides DATABASE_URL automatically for PostgreSQL
 if settings.database_url:
     database_url = settings.database_url
 else:
