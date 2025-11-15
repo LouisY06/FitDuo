@@ -32,6 +32,7 @@ export async function apiRequest<T>(
   const idToken = await getIdToken();
   
   if (!idToken) {
+    console.error("❌ No auth token available");
     throw {
       message: "Not authenticated. Please log in.",
       status: 401,
@@ -43,6 +44,7 @@ export async function apiRequest<T>(
   const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   const url = endpoint.startsWith("http") ? endpoint : `${baseUrl}${normalizedEndpoint}`;
   
+  console.log(`📡 API Request: ${options.method || "GET"} ${url}`);
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -52,8 +54,11 @@ export async function apiRequest<T>(
     },
   });
 
+  console.log(`📥 API Response: ${response.status} ${response.statusText}`);
+  
   // Handle 401 - token expired
   if (response.status === 401) {
+    console.error("❌ 401 Unauthorized - token expired");
     localStorage.removeItem("auth_token");
     throw {
       message: "Session expired. Please log in again.",
@@ -66,6 +71,7 @@ export async function apiRequest<T>(
     const error = await response.json().catch(() => ({ 
       message: `Request failed with status ${response.status}` 
     }));
+    console.error(`❌ API Error (${response.status}):`, error);
     throw {
       message: error.detail || error.message || "Request failed",
       status: response.status,
