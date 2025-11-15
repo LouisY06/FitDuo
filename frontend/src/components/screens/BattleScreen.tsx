@@ -195,7 +195,12 @@ export function BattleScreen() {
       ) : (
         <ShimmerButton 
           variant="success" 
-          onClick={handleFindRival}
+          onClick={(e) => {
+            console.log("🔴🔴🔴 BUTTON onClick EVENT FIRED 🔴🔴🔴");
+            e.preventDefault();
+            e.stopPropagation();
+            handleFindRival();
+          }}
           disabled={loading}
         >
           {loading ? "Joining queue..." : "Find a Rival"}
