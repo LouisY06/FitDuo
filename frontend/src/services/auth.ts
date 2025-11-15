@@ -85,37 +85,41 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
     // Store token in localStorage
     localStorage.setItem("auth_token", idToken);
 
-    // Sync with backend to get/create user profile
-    const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Failed to sync user" }));
-      throw {
-        message: error.detail || error.message || "Failed to sync user profile",
-        status: response.status,
-      } as ApiError;
-    }
-
-    const userData = await response.json();
-
-    // Get user profile
-    const profileResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
-
+    // Sync with backend to get/create user profile (optional if backend is down)
     let profile = null;
-    if (profileResponse.ok) {
-      profile = await profileResponse.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+
+        // Get user profile
+        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (profileResponse.ok) {
+          profile = await profileResponse.json();
+        } else {
+          profile = userData;
+        }
+      } else {
+        // Backend sync failed, but Firebase auth succeeded
+        console.warn("Backend sync failed, but user is authenticated with Firebase");
+      }
+    } catch (backendError) {
+      // Backend is not available, but Firebase auth succeeded
+      console.warn("Backend is not available, but user is authenticated with Firebase");
     }
 
     return {
@@ -194,35 +198,37 @@ export async function signUp(credentials: SignUpCredentials): Promise<AuthRespon
     // Store token in localStorage
     localStorage.setItem("auth_token", idToken);
 
-    // Sync with backend to create user profile
-    const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Failed to sync user" }));
-      throw {
-        message: error.detail || error.message || "Failed to create user profile",
-        status: response.status,
-      } as ApiError;
-    }
-
-    // Get user profile
-    const profileResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
-
+    // Sync with backend to create user profile (optional if backend is down)
     let profile = null;
-    if (profileResponse.ok) {
-      profile = await profileResponse.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (response.ok) {
+        // Get user profile
+        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (profileResponse.ok) {
+          profile = await profileResponse.json();
+        }
+      } else {
+        // Backend sync failed, but Firebase auth succeeded
+        console.warn("Backend sync failed, but user is authenticated with Firebase");
+      }
+    } catch (backendError) {
+      // Backend is not available, but Firebase auth succeeded
+      console.warn("Backend is not available, but user is authenticated with Firebase");
     }
 
     return {
@@ -392,35 +398,37 @@ export async function signInWithGoogle(): Promise<AuthResponse> {
     // Store token in localStorage
     localStorage.setItem("auth_token", idToken);
     
-    // Sync with backend to get/create user profile
-    const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Failed to sync user" }));
-      throw {
-        message: error.detail || error.message || "Failed to sync user profile",
-        status: response.status,
-      } as ApiError;
-    }
-    
-    // Get user profile
-    const profileResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
-    
+    // Sync with backend to get/create user profile (optional if backend is down)
     let profile = null;
-    if (profileResponse.ok) {
-      profile = await profileResponse.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+      
+      if (response.ok) {
+        // Get user profile
+        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+        
+        if (profileResponse.ok) {
+          profile = await profileResponse.json();
+        }
+      } else {
+        // Backend sync failed, but Firebase auth succeeded
+        console.warn("Backend sync failed, but user is authenticated with Firebase");
+      }
+    } catch (backendError) {
+      // Backend is not available, but Firebase auth succeeded
+      console.warn("Backend is not available, but user is authenticated with Firebase");
     }
     
     return {
