@@ -100,10 +100,12 @@ export class MatchmakingWebSocket {
       const url = `${wsUrl}/api/matchmaking/ws/${this.playerId}`;
 
       try {
+        console.log(`🔌 Attempting to connect to: ${url}`);
         this.ws = new WebSocket(url);
 
         this.ws.onopen = () => {
           console.log(`✅ Connected to matchmaking WebSocket for player ${this.playerId}`);
+          console.log(`🔗 WebSocket URL: ${url}`);
           this.reconnectAttempts = 0;
           resolve();
         };
@@ -118,7 +120,8 @@ export class MatchmakingWebSocket {
         };
 
         this.ws.onerror = (error) => {
-          console.error("Matchmaking WebSocket error:", error);
+          console.error("❌ Matchmaking WebSocket error:", error);
+          console.error(`❌ Failed to connect to: ${url}`);
           reject(error);
         };
 

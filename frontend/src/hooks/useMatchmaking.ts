@@ -50,13 +50,18 @@ export function useMatchmaking(
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        console.log("🔍 Fetching current user for matchmaking...");
         const user = await getCurrentUser();
+        console.log("👤 Current user:", user);
         // User object has id field from backend
         if (user && (user.id || (user as any).user_id)) {
           playerIdRef.current = (user.id || (user as any).user_id) as number;
+          console.log(`✅ Player ID set to: ${playerIdRef.current}`);
+        } else {
+          console.warn("⚠️ User ID not found in user object:", user);
         }
       } catch (err) {
-        console.error("Error fetching current user:", err);
+        console.error("❌ Error fetching current user:", err);
       }
     };
     fetchUser();
