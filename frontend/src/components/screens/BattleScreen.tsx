@@ -19,7 +19,7 @@ export function BattleScreen() {
   } = useMatchmaking({
     autoConnect: true,
     onMatchFound: (payload: MatchFoundPayload) => {
-      console.log("Match found!", payload);
+      console.log("🎮 Match found in BattleScreen!", payload);
       // Start countdown
       let cd = 3;
       setCountdown(cd);
@@ -31,6 +31,7 @@ export function BattleScreen() {
           clearInterval(interval);
           setCountdown(null);
           // Navigate to battle with game ID
+          console.log("🚀 Navigating to battle:", payload.game_id);
           navigate(`/app/battle/${payload.game_id}`);
         }
       }, 1000);
