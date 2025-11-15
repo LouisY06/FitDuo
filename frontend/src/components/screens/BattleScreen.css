@@ -1,142 +1,258 @@
-/* BattleScreen.css - Bento Box Design */
+/* BattleScreen.css - Clean 2-Column Hero Layout */
 
-.battle-screen-container {
+.matchmaking-page {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  padding-bottom: 6rem;
+  color: white;
+  box-sizing: border-box;
+  min-height: calc(100vh - 120px);
   display: flex;
   flex-direction: column;
+}
+
+/* Ensure header and error messages are above halo */
+.matchmaking-header,
+.matchmaking-error {
+  position: relative;
+  z-index: 2;
+}
+
+/* Header Section */
+.matchmaking-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.matchmaking-title {
+  font-family: "Audiowide", sans-serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 400;
+  margin: 0;
+  margin-bottom: 0.75rem;
+  color: #63ff00;
+  text-shadow: 0 0 20px rgba(99, 255, 0, 0.5);
+}
+
+.matchmaking-subtitle {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  opacity: 0.9;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Error Message */
+.matchmaking-error {
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+  background-color: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 16px;
+  color: #ff4444;
   box-sizing: border-box;
 }
 
-.battle-screen-bento-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: minmax(150px, auto);
-  gap: 1rem;
-  width: 100%;
+/* Hero Row - 2 Column Layout */
+.matchmaking-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4rem;
   max-width: 1200px;
-  margin: 0 auto;
-  height: 100%;
+  margin: 2rem auto 0;
+  padding-inline: 1.5rem;
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* Header Section - Full Width */
-.battle-header-cell {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 0.5rem 0 1rem;
-}
-
-/* Stats Panel - Spans 2 columns */
-.battle-stats-cell {
-  grid-column: span 2;
-  grid-row: span 1;
+/* Left Column - Stats */
+.matchmaking-left {
+  flex: 1 1 360px;
+  max-width: 520px;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 180px;
+  overflow: visible;
+  padding-right: 1rem;
+  box-sizing: border-box;
 }
 
-/* Info Text - Spans 2 columns, styled as card */
-.battle-info-cell {
-  grid-column: span 2;
-  grid-row: span 1;
+/* Right Column - Explanation Card with Halo Integration */
+.matchmaking-right {
+  flex: 1 1 360px;
+  max-width: 480px;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(17, 24, 39, 0.6);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  border: 1px solid rgba(99, 255, 0, 0.15);
-  padding: 1.25rem;
-  transition: all 0.3s ease;
-  min-height: 180px;
 }
 
-.battle-info-cell:hover {
-  border-color: rgba(99, 255, 0, 0.3);
+.matchmaking-explanation-card {
+  position: relative;
+  z-index: 2;
   background: rgba(17, 24, 39, 0.7);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-}
-
-/* Button Cell - Spans 2 columns, larger */
-.battle-button-cell {
-  grid-column: span 2;
-  grid-row: span 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 160px;
-  padding: 0.5rem;
-}
-
-/* Loading State - Full Width */
-.battle-loading-cell {
-  grid-column: 1 / -1;
-  grid-row: span 1;
-  min-height: 300px;
-  background: rgba(17, 24, 39, 0.4);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(20px);
   border-radius: 20px;
   border: 1px solid rgba(99, 255, 0, 0.2);
+  padding: 2rem 2.5rem;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 0 20px rgba(99, 255, 0, 0.05);
+  transition: all 0.3s ease;
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+}
+
+.matchmaking-explanation-card:hover {
+  border-color: rgba(99, 255, 0, 0.4);
+  background: rgba(17, 24, 39, 0.8);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 0 30px rgba(99, 255, 0, 0.1),
+    0 0 20px rgba(99, 255, 0, 0.2);
+}
+
+.matchmaking-explanation-text {
+  font-size: 1rem;
+  line-height: 1.7;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+}
+
+/* CTA Section - Button centered */
+.matchmaking-cta {
   display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+  padding: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* Loading State Container */
+.matchmaking-loading-container {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 60vh;
 }
 
-/* Rivals Grid - Full Width */
-.battle-rivals-cell {
-  grid-column: 1 / -1;
-  grid-row: span 1;
-  padding: 0.5rem 0;
-  max-height: calc(100vh - 300px);
-  overflow-y: auto;
+.matchmaking-progress-wrapper {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-/* Responsive Bento Grid */
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .matchmaking-hero {
+    flex-direction: column;
+    align-items: center;
+    gap: 2.5rem;
+  }
+
+  .matchmaking-left {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .matchmaking-right {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .matchmaking-explanation-card {
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 968px) {
-  .battle-screen-bento-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.875rem;
-    grid-auto-rows: minmax(140px, auto);
+  .matchmaking-page {
+    padding: 1.5rem 1rem;
   }
 
-  .battle-stats-cell,
-  .battle-info-cell,
-  .battle-button-cell {
-    grid-column: span 2;
-    min-height: 160px;
+  .matchmaking-header {
+    margin-bottom: 2rem;
   }
 
-  .battle-header-cell {
-    padding: 0.5rem 0 0.75rem;
+  .matchmaking-title {
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    margin-bottom: 0.5rem;
   }
 
-  .battle-loading-cell {
-    min-height: 250px;
+  .matchmaking-subtitle {
+    font-size: 1rem;
+  }
+
+  .matchmaking-hero {
+    margin-bottom: 2.5rem;
+    padding-inline: 1rem;
+  }
+
+  .matchmaking-explanation-card {
+    padding: 1.5rem 2rem;
+  }
+
+  .matchmaking-cta {
+    margin-top: 1.5rem;
   }
 }
 
 @media (max-width: 640px) {
-  .battle-screen-bento-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-    grid-auto-rows: minmax(120px, auto);
+  .matchmaking-page {
+    padding: 1.25rem 1rem;
+    padding-bottom: 5rem;
   }
 
-  .battle-stats-cell,
-  .battle-info-cell,
-  .battle-button-cell {
-    grid-column: span 1;
-    min-height: 140px;
+  .matchmaking-header {
+    margin-bottom: 1.5rem;
   }
 
-  .battle-button-cell {
-    min-height: 140px;
+  .matchmaking-title {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
   }
 
-  .battle-info-cell {
-    padding: 1rem;
+  .matchmaking-subtitle {
+    font-size: 0.95rem;
   }
 
-  .battle-loading-cell {
-    min-height: 220px;
+  .matchmaking-hero {
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .matchmaking-explanation-card {
+    padding: 1.25rem 1.5rem;
+    border-radius: 16px;
+  }
+
+  .matchmaking-explanation-text {
+    font-size: 0.9rem;
+  }
+
+  .matchmaking-error {
+    padding: 0.875rem 1rem;
+    margin-bottom: 1.5rem;
   }
 }

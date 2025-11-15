@@ -1,0 +1,129 @@
+/* MatchmakingProgressCard.css */
+
+.matchmaking-progress-card {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  border: 1px solid rgba(99, 255, 0, 0.2);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 0 20px rgba(99, 255, 0, 0.05);
+  padding: 3rem 2.5rem;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.matchmaking-progress-card:hover {
+  border-color: rgba(99, 255, 0, 0.3);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 0 30px rgba(99, 255, 0, 0.1),
+    0 0 20px rgba(99, 255, 0, 0.2);
+}
+
+.matchmaking-progress-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.5rem;
+}
+
+.matchmaking-progress-title {
+  font-family: "Audiowide", sans-serif;
+  font-size: 1.75rem;
+  font-weight: 400;
+  color: #63ff00;
+  margin: 0;
+  text-shadow: 0 0 20px rgba(99, 255, 0, 0.5);
+  letter-spacing: 0.02em;
+}
+
+.matchmaking-progress-loader {
+  padding: 1rem 0;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.matchmaking-progress-status {
+  font-size: 1.125rem;
+  color: #e5e7eb;
+  opacity: 0.9;
+  margin: 0;
+  font-weight: 500;
+}
+
+.matchmaking-progress-queue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  opacity: 0.8;
+}
+
+.matchmaking-progress-queue-separator {
+  color: rgba(99, 255, 0, 0.5);
+  font-weight: bold;
+}
+
+.matchmaking-progress-queue-item {
+  color: #9ca3af;
+}
+
+.matchmaking-progress-error {
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.matchmaking-progress-error p {
+  margin: 0;
+  color: #ff6b6b;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.matchmaking-progress-actions {
+  margin-top: 0.5rem;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .matchmaking-progress-card {
+    padding: 2rem 1.5rem;
+    max-width: 100%;
+  }
+
+  .matchmaking-progress-title {
+    font-size: 1.5rem;
+  }
+
+  .matchmaking-progress-status {
+    font-size: 1rem;
+  }
+
+  .matchmaking-progress-queue {
+    font-size: 0.8125rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .matchmaking-progress-queue-separator {
+    display: none;
+  }
+}
+
