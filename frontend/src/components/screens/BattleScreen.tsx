@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ShimmerButton } from "../ShimmerComponents";
+import { CyanLoadingDots } from "../CyanLoadingDots";
 
 export function BattleScreen() {
   const [isMatchmaking, setIsMatchmaking] = useState(false);
@@ -229,17 +230,8 @@ export function BattleScreen() {
 
       {isMatchmaking ? (
         <div style={{ textAlign: "center" }}>
-          <div
-            style={{
-              fontSize: "3rem",
-              marginBottom: "1rem",
-              animation: "spin 1s linear infinite",
-              display: "inline-block",
-            }}
-          >
-            ⚡
-          </div>
-          <p style={{ fontSize: "1.25rem", opacity: 0.9 }}>
+          <CyanLoadingDots size="large" />
+          <p style={{ fontSize: "1.25rem", opacity: 0.9, marginTop: "1.5rem" }}>
             Finding a rival...
           </p>
         </div>
