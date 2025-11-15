@@ -18,6 +18,8 @@ export interface FormRules {
   };
 }
 
+export type ExerciseType = "push-up" | "squat" | "plank" | "wall-sit" | "pull-up" | "sit-up";
+
 export interface RepDetectionState {
   repCount: number;
   isDown: boolean;

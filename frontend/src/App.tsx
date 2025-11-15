@@ -11,13 +11,26 @@ function App() {
   const [repCount, setRepCount] = useState(0);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
-  const [exercise] = useState("push-up");
+  const [exercise, setExercise] = useState<"push-up" | "squat" | "plank" | "sit-up">("push-up");
   const [videoReady, setVideoReady] = useState(false);
 
-  // Form rules for push-up (elbow angle should be between 90-180 degrees)
-  const formRules: FormRules = {
-    elbow_angle: { min: 90, max: 180 },
+  // Form rules based on exercise type
+  const getFormRules = (): FormRules => {
+    switch (exercise) {
+      case "push-up":
+        return { elbow_angle: { min: 90, max: 180 } };
+      case "squat":
+        return { knee_angle: { min: 90, max: 180 } };
+      case "sit-up":
+        return { torso_angle: { min: 0.05, max: 0.15 } };
+      case "plank":
+        return { shoulder_alignment: { threshold: 0.1 } };
+      default:
+        return { elbow_angle: { min: 90, max: 180 } };
+    }
   };
+
+  const formRules = getFormRules();
 
   // Create a ref that points to the webcam's video element
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -175,6 +188,39 @@ function App() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: "20px" }}>
+        <h3>Exercise Selection</h3>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "15px" }}>
+          {(["push-up", "squat", "sit-up", "plank"] as const).map((ex) => (
+            <button
+              key={ex}
+              onClick={() => {
+                setExercise(ex);
+                resetReps();
+                if (detector) {
+                  detector.setFormRules(getFormRules(), ex);
+                }
+              }}
+              style={{
+                padding: "10px 20px",
+                fontSize: "16px",
+                backgroundColor: exercise === ex ? "#007bff" : "#6c757d",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+                textTransform: "capitalize",
+              }}
+            >
+              {ex.replace("-", " ")}
+            </button>
+          ))}
+        </div>
+        <div style={{ marginBottom: "10px", padding: "10px", background: "#e9ecef", borderRadius: "5px" }}>
+          <strong>Current Exercise:</strong> <span style={{ textTransform: "capitalize" }}>{exercise.replace("-", " ")}</span>
         </div>
       </div>
 

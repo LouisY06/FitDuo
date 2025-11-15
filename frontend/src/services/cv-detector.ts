@@ -311,6 +311,21 @@ export class CVDetector {
   }
 
   private detectRep(landmarks: PoseLandmark[]): void {
+    const exercise = this.currentExercise.toLowerCase();
+    
+    if (exercise.includes("push-up") || exercise.includes("pushup")) {
+      this.detectPushUp(landmarks);
+    } else if (exercise.includes("squat")) {
+      this.detectSquat(landmarks);
+    } else if (exercise.includes("sit-up") || exercise.includes("situp") || exercise.includes("crunch")) {
+      this.detectSitUp(landmarks);
+    } else {
+      // Default to push-up detection
+      this.detectPushUp(landmarks);
+    }
+  }
+
+  private detectPushUp(landmarks: PoseLandmark[]): void {
     // MediaPipe pose landmark indices
     const LEFT_SHOULDER = 11;
     const LEFT_ELBOW = 13;
@@ -350,6 +365,78 @@ export class CVDetector {
     this.repState.lastAngle = avgAngle;
   }
 
+  private detectSquat(landmarks: PoseLandmark[]): void {
+    // MediaPipe pose landmark indices
+    const LEFT_HIP = 23;
+    const LEFT_KNEE = 25;
+    const LEFT_ANKLE = 27;
+    const RIGHT_HIP = 24;
+    const RIGHT_KNEE = 26;
+    const RIGHT_ANKLE = 28;
+
+    // Calculate knee angle for both legs (use average)
+    const leftAngle = this.calculateAngle(
+      landmarks[LEFT_HIP],
+      landmarks[LEFT_KNEE],
+      landmarks[LEFT_ANKLE]
+    );
+    const rightAngle = this.calculateAngle(
+      landmarks[RIGHT_HIP],
+      landmarks[RIGHT_KNEE],
+      landmarks[RIGHT_ANKLE]
+    );
+    const avgAngle = (leftAngle + rightAngle) / 2;
+
+    // Get form rules (default: min 90 degrees for down position in squat)
+    const minAngle = this.formRules.knee_angle?.min ?? 90;
+    const maxAngle = this.formRules.knee_angle?.max ?? 180;
+
+    // Detect rep cycle: down (angle < min) -> up (angle > max)
+    if (!this.repState.isDown && avgAngle < minAngle) {
+      this.repState.isDown = true;
+    } else if (this.repState.isDown && avgAngle > maxAngle) {
+      this.repState.isDown = false;
+      this.repState.repCount++;
+      if (this.onRepDetected) {
+        this.onRepDetected(this.repState.repCount);
+      }
+    }
+
+    this.repState.lastAngle = avgAngle;
+  }
+
+  private detectSitUp(landmarks: PoseLandmark[]): void {
+    // MediaPipe pose landmark indices
+    const LEFT_SHOULDER = 11;
+    const LEFT_HIP = 23;
+    const RIGHT_SHOULDER = 12;
+    const RIGHT_HIP = 24;
+
+    // Calculate angle between shoulders and hips (torso angle)
+    const shoulderMidY = (landmarks[LEFT_SHOULDER].y + landmarks[RIGHT_SHOULDER].y) / 2;
+    const hipMidY = (landmarks[LEFT_HIP].y + landmarks[RIGHT_HIP].y) / 2;
+
+    // Vertical distance from shoulders to hips (smaller = more upright)
+    const torsoAngle = Math.abs(shoulderMidY - hipMidY);
+
+    // Get form rules (default thresholds)
+    const downThreshold = this.formRules.torso_angle?.max ?? 0.15; // More horizontal
+    const upThreshold = this.formRules.torso_angle?.min ?? 0.05; // More vertical
+
+    // Detect rep cycle: down (torso more horizontal) -> up (torso more vertical)
+    if (!this.repState.isDown && torsoAngle > downThreshold) {
+      this.repState.isDown = true;
+    } else if (this.repState.isDown && torsoAngle < upThreshold) {
+      this.repState.isDown = false;
+      this.repState.repCount++;
+      if (this.onRepDetected) {
+        this.onRepDetected(this.repState.repCount);
+      }
+    }
+
+    this.repState.lastAngle = torsoAngle;
+  }
+
   private detectStaticHold(landmarks: PoseLandmark[]): void {
     // Key points for stability check (shoulders, hips)
     const LEFT_SHOULDER = 11;
@@ -386,8 +473,10 @@ export class CVDetector {
       return true; // No rules = always valid
     }
 
+    const exercise = this.currentExercise.toLowerCase();
+
     // Check elbow angle for push-ups
-    if (this.formRules.elbow_angle) {
+    if (this.formRules.elbow_angle && (exercise.includes("push-up") || exercise.includes("pushup"))) {
       const LEFT_ELBOW = 13;
       const RIGHT_ELBOW = 14;
       const LEFT_SHOULDER = 11;
@@ -415,13 +504,43 @@ export class CVDetector {
       }
     }
 
+    // Check knee angle for squats
+    if (this.formRules.knee_angle && exercise.includes("squat")) {
+      const LEFT_HIP = 23;
+      const LEFT_KNEE = 25;
+      const LEFT_ANKLE = 27;
+      const RIGHT_HIP = 24;
+      const RIGHT_KNEE = 26;
+      const RIGHT_ANKLE = 28;
+
+      const leftAngle = this.calculateAngle(
+        landmarks[LEFT_HIP],
+        landmarks[LEFT_KNEE],
+        landmarks[LEFT_ANKLE]
+      );
+      const rightAngle = this.calculateAngle(
+        landmarks[RIGHT_HIP],
+        landmarks[RIGHT_KNEE],
+        landmarks[RIGHT_ANKLE]
+      );
+      const avgAngle = (leftAngle + rightAngle) / 2;
+
+      const min = this.formRules.knee_angle.min ?? 0;
+      const max = this.formRules.knee_angle.max ?? 180;
+
+      if (avgAngle < min || avgAngle > max) {
+        return false;
+      }
+    }
+
     return true;
   }
 
   private getFormErrors(landmarks: PoseLandmark[]): string[] {
     const errors: string[] = [];
+    const exercise = this.currentExercise.toLowerCase();
 
-    if (this.formRules.elbow_angle) {
+    if (this.formRules.elbow_angle && (exercise.includes("push-up") || exercise.includes("pushup"))) {
       const LEFT_ELBOW = 13;
       const RIGHT_ELBOW = 14;
       const LEFT_SHOULDER = 11;
@@ -448,6 +567,36 @@ export class CVDetector {
         errors.push("Go deeper!");
       } else if (avgAngle > max) {
         errors.push("Not fully extended");
+      }
+    }
+
+    if (this.formRules.knee_angle && exercise.includes("squat")) {
+      const LEFT_HIP = 23;
+      const LEFT_KNEE = 25;
+      const LEFT_ANKLE = 27;
+      const RIGHT_HIP = 24;
+      const RIGHT_KNEE = 26;
+      const RIGHT_ANKLE = 28;
+
+      const leftAngle = this.calculateAngle(
+        landmarks[LEFT_HIP],
+        landmarks[LEFT_KNEE],
+        landmarks[LEFT_ANKLE]
+      );
+      const rightAngle = this.calculateAngle(
+        landmarks[RIGHT_HIP],
+        landmarks[RIGHT_KNEE],
+        landmarks[RIGHT_ANKLE]
+      );
+      const avgAngle = (leftAngle + rightAngle) / 2;
+
+      const min = this.formRules.knee_angle.min ?? 0;
+      const max = this.formRules.knee_angle.max ?? 180;
+
+      if (avgAngle < min) {
+        errors.push("Go deeper!");
+      } else if (avgAngle > max) {
+        errors.push("Stand up straight");
       }
     }
 
