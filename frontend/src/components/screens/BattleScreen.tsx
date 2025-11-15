@@ -1,18 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ShimmerButton } from "../ShimmerComponents";
 import { CyanLoadingDots } from "../CyanLoadingDots";
+import { useMatchmaking, type MatchFoundPayload } from "../../hooks/useMatchmaking";
 
 export function BattleScreen() {
-  const [isMatchmaking, setIsMatchmaking] = useState(false);
-  const [isMatched, setIsMatched] = useState(false);
+  const navigate = useNavigate();
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [matchInfo, setMatchInfo] = useState<MatchFoundPayload | null>(null);
 
-  const handleFindRival = () => {
-    setIsMatchmaking(true);
-    // Simulate matchmaking
-    setTimeout(() => {
-      setIsMatchmaking(false);
-      setIsMatched(true);
+  const {
+    isSearching,
+    queueStatus,
+    error,
+    loading,
+    startSearching,
+    stopSearching,
+  } = useMatchmaking({
+    autoConnect: true,
+    onMatchFound: (payload) => {
+      console.log("Match found!", payload);
+      setMatchInfo(payload);
       // Start countdown
       let cd = 3;
       setCountdown(cd);
@@ -23,10 +31,40 @@ export function BattleScreen() {
         } else {
           clearInterval(interval);
           setCountdown(null);
+          // Navigate to battle with game ID
+          navigate(`/app/battle/${payload.game_id}`);
         }
       }, 1000);
-    }, 2000);
+    },
+  });
+
+  const handleFindRival = async () => {
+    console.log("Find Rival clicked - starting matchmaking...");
+    try {
+      await startSearching();
+      console.log("Matchmaking started successfully");
+    } catch (err) {
+      console.error("Failed to start matchmaking:", err);
+      alert(`Failed to start matchmaking: ${(err as any)?.message || "Unknown error"}`);
+    }
   };
+
+  const handleCancel = async () => {
+    try {
+      await stopSearching();
+    } catch (err) {
+      console.error("Failed to cancel matchmaking:", err);
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isSearching) {
+        stopSearching().catch(console.error);
+      }
+    };
+  }, [isSearching, stopSearching]);
 
   if (countdown !== null) {
     return (
@@ -57,138 +95,8 @@ export function BattleScreen() {
     );
   }
 
-  if (isMatched) {
-    return (
-      <div
-        style={{
-          height: "100vh",
-          backgroundColor: "#020617",
-          color: "white",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* Top Bar */}
-        <div
-          style={{
-            padding: "1rem 2rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            borderBottom: "1px solid rgba(99, 255, 0, 0.2)",
-          }}
-        >
-          <div style={{ fontSize: "0.875rem", opacity: 0.8 }}>
-            Round 1: Squats – 30s
-          </div>
-          <div
-            style={{
-              fontFamily: "VT323, monospace",
-              fontSize: "2rem",
-              color: "#63ff00",
-            }}
-          >
-            00:30
-          </div>
-        </div>
-
-        {/* Battle View */}
-        <div
-          style={{
-            flex: 1,
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "1rem",
-            padding: "2rem",
-          }}
-        >
-          {/* You */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "1rem",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <h3 style={{ margin: 0, color: "#63ff00" }}>You</h3>
-            </div>
-            <div
-              style={{
-                flex: 1,
-                backgroundColor: "rgba(99, 255, 0, 0.1)",
-                borderRadius: "20px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "1px solid rgba(99, 255, 0, 0.2)",
-                minHeight: "300px",
-              }}
-            >
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>📹</div>
-                <p style={{ opacity: 0.8 }}>Your camera</p>
-              </div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "2rem", color: "#63ff00" }}>0</div>
-              <div style={{ fontSize: "0.875rem", opacity: 0.8 }}>Reps</div>
-            </div>
-          </div>
-
-          {/* Opponent */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "1rem",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <h3 style={{ margin: 0, color: "#63ff00" }}>Opponent</h3>
-            </div>
-            <div
-              style={{
-                flex: 1,
-                backgroundColor: "rgba(99, 255, 0, 0.1)",
-                borderRadius: "20px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "1px solid rgba(99, 255, 0, 0.2)",
-                minHeight: "300px",
-              }}
-            >
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>👤</div>
-                <p style={{ opacity: 0.8 }}>Opponent view</p>
-              </div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "2rem", color: "#63ff00" }}>0</div>
-              <div style={{ fontSize: "0.875rem", opacity: 0.8 }}>Reps</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Hints */}
-        <div
-          style={{
-            padding: "1rem 2rem",
-            borderTop: "1px solid rgba(99, 255, 0, 0.2)",
-            display: "flex",
-            justifyContent: "center",
-            gap: "2rem",
-            fontSize: "0.875rem",
-            opacity: 0.8,
-          }}
-        >
-          <span>👍 = send encouragement</span>
-          <span>👎 = send taunt</span>
-        </div>
-      </div>
-    );
-  }
+  // Note: The actual battle screen will be at /app/battle/:gameId
+  // This component only handles matchmaking and countdown
 
   return (
     <div
@@ -228,16 +136,54 @@ export function BattleScreen() {
         Get matched with a live rival. Best reps wins.
       </p>
 
-      {isMatchmaking ? (
+      {error && !isSearching && (
+        <div style={{ 
+          padding: "1rem", 
+          backgroundColor: "rgba(255, 68, 68, 0.1)", 
+          border: "1px solid rgba(255, 68, 68, 0.3)",
+          borderRadius: "8px",
+          marginBottom: "1rem",
+          color: "#ff4444"
+        }}>
+          <p style={{ margin: 0, fontSize: "0.875rem" }}>{error}</p>
+          <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.75rem", opacity: 0.8 }}>
+            Check browser console (F12) for details
+          </p>
+        </div>
+      )}
+
+      {isSearching ? (
         <div style={{ textAlign: "center" }}>
           <CyanLoadingDots size="large" />
           <p style={{ fontSize: "1.25rem", opacity: 0.9, marginTop: "1.5rem" }}>
             Finding a rival...
           </p>
+          {queueStatus && queueStatus.in_queue && (
+            <p style={{ fontSize: "0.875rem", opacity: 0.7, marginTop: "0.5rem" }}>
+              Position in queue: {queueStatus.queue_position} • 
+              Estimated wait: {queueStatus.estimated_wait}s
+            </p>
+          )}
+          {error && (
+            <p style={{ fontSize: "0.875rem", color: "#ff4444", marginTop: "0.5rem" }}>
+              {error}
+            </p>
+          )}
+          <ShimmerButton
+            variant="danger"
+            onClick={handleCancel}
+            style={{ marginTop: "1.5rem" }}
+          >
+            Cancel
+          </ShimmerButton>
         </div>
       ) : (
-        <ShimmerButton variant="success" onClick={handleFindRival}>
-          Find a Rival
+        <ShimmerButton 
+          variant="success" 
+          onClick={handleFindRival}
+          disabled={loading}
+        >
+          {loading ? "Joining queue..." : "Find a Rival"}
         </ShimmerButton>
       )}
 
