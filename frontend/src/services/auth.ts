@@ -62,10 +62,27 @@ export interface AuthResponse {
  * Get Firebase ID token for authenticated user
  */
 async function getIdToken(): Promise<string | null> {
-  if (!auth) return null;
+  if (!auth) {
+    // Fallback to localStorage token if auth not initialized
+    const token = localStorage.getItem("auth_token");
+    if (token) return token;
+    return null;
+  }
   const user = auth.currentUser;
-  if (!user) return null;
-  return await user.getIdToken();
+  if (!user) {
+    // Fallback to localStorage token if no current user
+    const token = localStorage.getItem("auth_token");
+    if (token) return token;
+    return null;
+  }
+  try {
+    return await user.getIdToken();
+  } catch (error) {
+    // If getting token fails, try localStorage
+    const token = localStorage.getItem("auth_token");
+    if (token) return token;
+    return null;
+  }
 }
 
 /**
