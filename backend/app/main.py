@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database.connection import init_db
 from app.routers import exercise, match, websocket, llm, auth, player, matchmaking
+import os
 
 app = FastAPI(
     title=settings.api_title,
