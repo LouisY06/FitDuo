@@ -12,7 +12,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,9 +48,11 @@ async def root():
 async def debug_cors():
     """Debug endpoint to check CORS configuration"""
     return {
-        "cors_origins": settings.cors_origins,
-        "cors_origins_count": len(settings.cors_origins),
+        "cors_origins": settings.cors_origins_list,
+        "cors_origins_count": len(settings.cors_origins_list),
+        "cors_origins_raw": settings.cors_origins,
         "environment": settings.environment,
+        "cors_origins_env": os.getenv("CORS_ORIGINS", "NOT SET"),
     }
 
 
