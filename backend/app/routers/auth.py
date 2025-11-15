@@ -5,6 +5,9 @@ from app.models import User
 from app.middleware.auth import get_current_user, require_auth
 from pydantic import BaseModel
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -26,6 +29,9 @@ async def get_current_user_profile(
 ):
     """Get or create user profile from Firebase token"""
     firebase_uid = current_user.get("uid")
+    email = current_user.get("email")
+    
+    logger.info(f"🔍 /me request - Firebase UID: {firebase_uid}, Email: {email}")
     
     if not firebase_uid:
         raise HTTPException(status_code=401, detail="Invalid user token")
@@ -37,6 +43,7 @@ async def get_current_user_profile(
     
     if not user:
         # Create new user
+        logger.info(f"✨ Creating NEW user - Firebase UID: {firebase_uid}, Email: {email}")
         user = User(
             firebase_uid=firebase_uid,
             username=current_user.get("name") or current_user.get("email", "User"),
@@ -45,6 +52,9 @@ async def get_current_user_profile(
         session.add(user)
         session.commit()
         session.refresh(user)
+        logger.info(f"✅ Created user ID: {user.id}")
+    else:
+        logger.info(f"✅ Found existing user ID: {user.id} for Firebase UID: {firebase_uid}")
     
     return UserResponse(
         id=user.id,
