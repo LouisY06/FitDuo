@@ -188,10 +188,12 @@ class MatchmakingQueue:
         
         # Match if we have an opponent and score is acceptable
         if best_match and best_score < effective_threshold:
-            logger.info(f"Match found! Player {player_id} vs Player {best_match.player_id} (score: {best_score:.2f})")
+            logger.info(f"Match found! Player {player_id} vs Player {best_match.player_id} (score: {best_score:.2f}, threshold: {effective_threshold:.2f})")
             return await self._create_match(player, best_match, session)
         elif best_match:
-            logger.debug(f"No match yet for player {player_id}. Best score: {best_score:.2f} (threshold: {effective_threshold:.2f})")
+            logger.warning(f"No match yet for player {player_id}. Best score: {best_score:.2f} (threshold: {effective_threshold:.2f}) - score too high!")
+        else:
+            logger.info(f"No opponents found for player {player_id} (queue size: {len(self.queue)})")
         
         return None
     
