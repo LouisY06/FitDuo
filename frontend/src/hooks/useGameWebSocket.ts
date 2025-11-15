@@ -62,7 +62,7 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
     if (onGameState) {
       unsubscribers.push(
         ws.on("GAME_STATE", (message: WebSocketMessage) => {
-          onGameState(message.payload as GameState);
+          onGameState(message.payload as unknown as GameState);
         })
       );
     }
@@ -119,7 +119,7 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
     if (onError) {
       unsubscribers.push(
         ws.on("ERROR", (message: WebSocketMessage) => {
-          const errorMsg = message.payload as string;
+          const errorMsg = message.payload as unknown as string;
           onError(errorMsg);
           setError(errorMsg);
         })

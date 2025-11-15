@@ -9,6 +9,9 @@
 
 import { apiGet, apiPost, apiPut, type ApiError } from "./api";
 
+// Re-export ApiError for convenience
+export type { ApiError };
+
 // ==================== Types ====================
 
 export interface PlayerStats {
