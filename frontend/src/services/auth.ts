@@ -90,7 +90,9 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
     // Sync with backend to get/create user profile (optional if backend is down)
     let profile = null;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
+      // Normalize URL to prevent double slashes
+      const baseUrl = API_BASE_URL.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/auth/sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -102,7 +104,7 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
         const userData = await response.json();
 
         // Get user profile
-        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        const profileResponse = await fetch(`${baseUrl}/api/auth/me`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -203,7 +205,9 @@ export async function signUp(credentials: SignUpCredentials): Promise<AuthRespon
     // Sync with backend to create user profile (optional if backend is down)
     let profile = null;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
+      // Normalize URL to prevent double slashes
+      const baseUrl = API_BASE_URL.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/auth/sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -213,7 +217,7 @@ export async function signUp(credentials: SignUpCredentials): Promise<AuthRespon
 
       if (response.ok) {
         // Get user profile
-        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        const profileResponse = await fetch(`${baseUrl}/api/auth/me`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -320,7 +324,9 @@ export async function getCurrentUser(): Promise<AuthResponse["user"]> {
       throw { message: "Not authenticated", status: 401 } as ApiError;
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+    // Normalize URL to prevent double slashes
+    const baseUrl = API_BASE_URL.replace(/\/$/, "");
+    const response = await fetch(`${baseUrl}/api/auth/me`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -403,7 +409,9 @@ export async function signInWithGoogle(): Promise<AuthResponse> {
     // Sync with backend to get/create user profile (optional if backend is down)
     let profile = null;
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/sync`, {
+      // Normalize URL to prevent double slashes
+      const baseUrl = API_BASE_URL.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/auth/sync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -413,7 +421,7 @@ export async function signInWithGoogle(): Promise<AuthResponse> {
       
       if (response.ok) {
         // Get user profile
-        const profileResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        const profileResponse = await fetch(`${baseUrl}/api/auth/me`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
