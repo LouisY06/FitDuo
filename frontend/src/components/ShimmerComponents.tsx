@@ -25,12 +25,20 @@ export function ShimmerButton({
 }: ShimmerButtonProps) {
   const handleClick = () => {
     console.log("🔴 ShimmerButton clicked!", { disabled, hasOnClick: !!onClick });
-    if (onClick && !disabled) {
+    if (disabled) {
+      console.warn("⚠️ Button is disabled - onClick will not be called");
+      return;
+    }
+    if (!onClick) {
+      console.warn("⚠️ No onClick handler provided");
+      return;
+    }
+    console.log("✅ Calling onClick handler...");
+    try {
       onClick();
-    } else if (disabled) {
-      console.warn("⚠️ Button is disabled");
-    } else {
-      console.warn("⚠️ No onClick handler");
+      console.log("✅ onClick handler completed");
+    } catch (error) {
+      console.error("❌ Error in onClick handler:", error);
     }
   };
   
