@@ -1,0 +1,322 @@
+"""
+Matchmaking Service
+
+Handles player queue management and skill-based matching for multiplayer battles.
+"""
+
+from typing import Optional, Dict, List
+from datetime import datetime, timedelta
+from dataclasses import dataclass, field
+from sqlmodel import Session, select
+from app.models import User, PlayerStats, GameSession, GameStatus
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class QueuedPlayer:
+    """Represents a player in the matchmaking queue"""
+    player_id: int
+    user_id: int  # Firebase UID reference
+    level: int
+    experience_points: int
+    win_rate: float
+    exercise_id: Optional[int] = None  # Preferred exercise
+    queued_at: datetime = field(default_factory=datetime.utcnow)
+    search_range_expanded: bool = False  # Whether we've expanded search criteria
+
+
+class MatchmakingQueue:
+    """
+    In-memory matchmaking queue with skill-based matching algorithm.
+    
+    For production scaling, consider using Redis or a database-backed queue.
+    """
+    
+    def __init__(self):
+        self.queue: Dict[int, QueuedPlayer] = {}  # player_id -> QueuedPlayer
+        self.matchmaking_websockets: Dict[int, any] = {}  # player_id -> WebSocket
+        self.lock = asyncio.Lock()
+        self.match_threshold = 50.0  # Maximum match score for a good match
+        self.queue_timeout = timedelta(minutes=5)  # Remove stale players after 5 minutes
+        
+    async def add_player(
+        self,
+        player_id: int,
+        user_id: int,
+        level: int,
+        experience_points: int,
+        win_rate: float,
+        exercise_id: Optional[int] = None,
+        session: Optional[Session] = None
+    ) -> bool:
+        """
+        Add a player to the matchmaking queue.
+        
+        Returns True if added successfully, False if already in queue.
+        """
+        async with self.lock:
+            if player_id in self.queue:
+                logger.warning(f"Player {player_id} already in queue")
+                return False
+            
+            queued_player = QueuedPlayer(
+                player_id=player_id,
+                user_id=user_id,
+                level=level,
+                experience_points=experience_points,
+                win_rate=win_rate,
+                exercise_id=exercise_id,
+            )
+            
+            self.queue[player_id] = queued_player
+            logger.info(f"Player {player_id} added to matchmaking queue")
+            
+            # Try to find a match immediately (async, don't wait)
+            asyncio.create_task(self._try_match_and_notify(player_id, session))
+            
+            return True
+    
+    async def remove_player(self, player_id: int) -> bool:
+        """Remove a player from the queue."""
+        async with self.lock:
+            if player_id in self.queue:
+                del self.queue[player_id]
+                logger.info(f"Player {player_id} removed from queue")
+                return True
+            return False
+    
+    async def get_queue_status(self, player_id: int) -> Dict:
+        """Get queue status for a player."""
+        async with self.lock:
+            if player_id not in self.queue:
+                return {
+                    "in_queue": False,
+                    "queue_position": 0,
+                    "estimated_wait": 0,
+                }
+            
+            # Calculate queue position (players with similar skill)
+            player = self.queue[player_id]
+            similar_players = sum(
+                1 for p in self.queue.values()
+                if p.player_id != player_id
+                and self._calculate_match_score(player, p) < self.match_threshold
+            )
+            
+            # Estimate wait time (rough calculation)
+            estimated_wait = max(10, similar_players * 5)  # 5 seconds per similar player, min 10s
+            
+            return {
+                "in_queue": True,
+                "queue_position": similar_players + 1,
+                "estimated_wait": estimated_wait,
+            }
+    
+    async def _try_match_and_notify(
+        self,
+        player_id: int,
+        session: Optional[Session] = None
+    ):
+        """Try to find a match and notify players if found."""
+        match_result = await self._try_match_player(player_id, session)
+        if match_result:
+            # Notify both players
+            await self.notify_match_found(
+                match_result["player1"]["player_id"],
+                match_result["player1"],
+            )
+            await self.notify_match_found(
+                match_result["player2"]["player_id"],
+                match_result["player2"],
+            )
+    
+    async def _try_match_player(
+        self,
+        player_id: int,
+        session: Optional[Session] = None
+    ) -> Optional[Dict]:
+        """
+        Try to find a match for a player.
+        Returns match info if found, None otherwise.
+        """
+        if player_id not in self.queue:
+            return None
+        
+        player = self.queue[player_id]
+        
+        # Find best match
+        best_match = None
+        best_score = float('inf')
+        
+        for opponent_id, opponent in self.queue.items():
+            if opponent_id == player_id:
+                continue
+            
+            score = self._calculate_match_score(player, opponent)
+            
+            # Check if exercise preference matches (if specified)
+            exercise_match = True
+            if player.exercise_id and opponent.exercise_id:
+                exercise_match = player.exercise_id == opponent.exercise_id
+            elif player.exercise_id or opponent.exercise_id:
+                # If only one has preference, it's still a match
+                exercise_match = True
+            
+            # Consider it a match if score is good and exercises match
+            if score < best_score and exercise_match:
+                best_score = score
+                best_match = opponent
+        
+        # If we found a good match, create the game session
+        if best_match and best_score < self.match_threshold:
+            return await self._create_match(player, best_match, session)
+        
+        # If no match found and we haven't expanded search, mark for expansion
+        if not player.search_range_expanded and best_score >= self.match_threshold:
+            player.search_range_expanded = True
+            # Expand match threshold temporarily
+            expanded_threshold = self.match_threshold * 1.5
+            if best_match and best_score < expanded_threshold:
+                return await self._create_match(player, best_match, session)
+        
+        return None
+    
+    def _calculate_match_score(self, player1: QueuedPlayer, player2: QueuedPlayer) -> float:
+        """
+        Calculate match score between two players.
+        Lower score = better match.
+        
+        Factors:
+        - Level difference (closer levels = better)
+        - XP difference (closer XP = better)
+        - Win rate similarity (closer win rates = better)
+        """
+        # Level difference (weight: 10 points per level)
+        level_diff = abs(player1.level - player2.level)
+        level_score = level_diff * 10
+        
+        # XP difference (weight: 1 point per 100 XP)
+        xp_diff = abs(player1.experience_points - player2.experience_points)
+        xp_score = xp_diff / 100
+        
+        # Win rate difference (weight: 100 points per 0.1 difference)
+        win_rate_diff = abs(player1.win_rate - player2.win_rate)
+        win_rate_score = win_rate_diff * 1000
+        
+        # Combined score
+        total_score = level_score + xp_score + win_rate_score
+        
+        return total_score
+    
+    async def _create_match(
+        self,
+        player1: QueuedPlayer,
+        player2: QueuedPlayer,
+        session: Optional[Session] = None
+    ) -> Optional[Dict]:
+        """
+        Create a game session for two matched players.
+        Returns match info with game_id.
+        """
+        if not session:
+            logger.error("Cannot create match without database session")
+            return None
+        
+        try:
+            # Determine exercise (prefer player1's choice, fallback to player2's)
+            exercise_id = player1.exercise_id or player2.exercise_id
+            
+            # Create game session
+            game_session = GameSession(
+                player_a_id=player1.player_id,
+                player_b_id=player2.player_id,
+                status=GameStatus.WAITING.value,
+                current_exercise_id=exercise_id,
+            )
+            
+            session.add(game_session)
+            session.commit()
+            session.refresh(game_session)
+            
+            logger.info(
+                f"Match created: Game {game_session.id} - "
+                f"Player {player1.player_id} vs Player {player2.player_id}"
+            )
+            
+            # Remove both players from queue
+            await self.remove_player(player1.player_id)
+            await self.remove_player(player2.player_id)
+            
+            # Get opponent info for notifications
+            opponent1_user = session.get(User, player2.player_id)
+            opponent2_user = session.get(User, player1.player_id)
+            
+            return {
+                "game_id": game_session.id,
+                "player1": {
+                    "player_id": player1.player_id,
+                    "opponent_id": player2.player_id,
+                    "opponent_name": opponent1_user.username if opponent1_user else "Opponent",
+                    "exercise_id": exercise_id,
+                },
+                "player2": {
+                    "player_id": player2.player_id,
+                    "opponent_id": player1.player_id,
+                    "opponent_name": opponent2_user.username if opponent2_user else "Opponent",
+                    "exercise_id": exercise_id,
+                },
+            }
+        except Exception as e:
+            logger.error(f"Error creating match: {e}")
+            session.rollback()
+            return None
+    
+    async def cleanup_stale_players(self):
+        """Remove players who have been in queue too long."""
+        async with self.lock:
+            now = datetime.utcnow()
+            stale_players = [
+                player_id
+                for player_id, player in self.queue.items()
+                if now - player.queued_at > self.queue_timeout
+            ]
+            
+            for player_id in stale_players:
+                await self.remove_player(player_id)
+                logger.info(f"Removed stale player {player_id} from queue")
+    
+    def register_matchmaking_websocket(self, player_id: int, websocket: any):
+        """Register a WebSocket connection for matchmaking updates."""
+        self.matchmaking_websockets[player_id] = websocket
+    
+    def unregister_matchmaking_websocket(self, player_id: int):
+        """Unregister a WebSocket connection."""
+        if player_id in self.matchmaking_websockets:
+            del self.matchmaking_websockets[player_id]
+    
+    async def notify_match_found(self, player_id: int, match_info: Dict):
+        """Notify a player that a match was found via WebSocket."""
+        if player_id in self.matchmaking_websockets:
+            websocket = self.matchmaking_websockets[player_id]
+            try:
+                await websocket.send_json({
+                    "type": "MATCH_FOUND",
+                    "payload": match_info,
+                })
+            except Exception as e:
+                logger.error(f"Error sending match notification to player {player_id}: {e}")
+
+
+# Global matchmaking queue instance
+matchmaking_queue = MatchmakingQueue()
+
+
+async def start_matchmaking_cleanup_task():
+    """Background task to clean up stale players from queue."""
+    while True:
+        await asyncio.sleep(60)  # Run every minute
+        await matchmaking_queue.cleanup_stale_players()
+
