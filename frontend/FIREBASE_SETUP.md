@@ -15,8 +15,13 @@ Firebase Auth has been integrated into the frontend. Follow these steps to compl
 
 ## 2. Create Environment File
 
-Create a file called `.env.local` in the `frontend/` directory:
+**For new developers**: Copy the example file:
+```bash
+cd frontend
+cp .env.example .env.local
+```
 
+**Or create manually**:
 ```bash
 cd frontend
 touch .env.local
@@ -84,7 +89,20 @@ Once configured, you should be able to:
 
 - `frontend/src/config/firebase.ts` - Firebase initialization
 - `frontend/src/services/auth.ts` - Authentication service with Firebase integration
-- `.env.local` - Your local environment variables (create this file)
+- `.env.example` - Template file (committed to repo)
+- `.env.local` - Your local environment variables (create this file, NOT committed)
+
+## Sharing with Team Members
+
+**Important**: `.env.local` is gitignored and not shared in the repository.
+
+To share Firebase credentials with your frontend developer:
+
+1. **Option 1**: Share the Firebase config values directly (they're safe to share - these are public client-side credentials)
+2. **Option 2**: Give them access to Firebase Console so they can get the values themselves
+3. **Option 3**: They can copy `.env.example` and you provide the actual values
+
+See `DEVELOPER_SETUP.md` for detailed instructions for new developers.
 
 ## Next Steps
 
