@@ -23,11 +23,22 @@ export function ShimmerButton({
   disabled = false,
   className = '',
 }: ShimmerButtonProps) {
+  const handleClick = () => {
+    console.log("🔴 ShimmerButton clicked!", { disabled, hasOnClick: !!onClick });
+    if (onClick && !disabled) {
+      onClick();
+    } else if (disabled) {
+      console.warn("⚠️ Button is disabled");
+    } else {
+      console.warn("⚠️ No onClick handler");
+    }
+  };
+  
   return (
     <div className={`shimmer-wrapper shimmer-wrapper--${variant} ${className}`}>
       <button 
         className="shimmer-btn" 
-        onClick={onClick}
+        onClick={handleClick}
         type={type}
         disabled={disabled}
       >
