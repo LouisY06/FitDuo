@@ -1,0 +1,25 @@
+# Backend Engineers: DO NOT MODIFY FILES LISTED BELOW
+# This is a reference file - see FRONTEND_ONLY_DO_NOT_TOUCH.md for details
+
+# Entire frontend directory
+frontend/
+
+# Frontend source code
+frontend/src/
+
+# Frontend components
+frontend/src/components/
+
+# Frontend configuration
+frontend/package.json
+frontend/vite.config.ts
+frontend/tsconfig*.json
+frontend/eslint.config.js
+
+# Computer Vision module (frontend-only)
+frontend/cv/
+
+# Frontend build artifacts (generated)
+frontend/node_modules/
+frontend/dist/
+
