@@ -40,13 +40,17 @@ async def join_queue(
     
     The current user will be added to the queue and matched with a suitable opponent.
     """
+    logger.info(f"Join queue request from user: {current_user.get('uid', 'unknown')}")
     # Get user ID from Firebase UID
     user = session.exec(
         select(User).where(User.firebase_uid == current_user["uid"])
     ).first()
     
     if not user:
+        logger.warning(f"User not found for Firebase UID: {current_user.get('uid', 'unknown')}")
         raise HTTPException(status_code=404, detail="User not found")
+    
+    logger.info(f"Found user ID {user.id} for Firebase UID {current_user['uid']}")
     
     # Get player stats for skill-based matching
     player_stats = session.exec(
