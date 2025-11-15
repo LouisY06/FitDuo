@@ -30,6 +30,8 @@ const LoadingFallback = () => (
       justifyContent: "center",
       minHeight: "100vh",
       color: "white",
+      padding: "4rem 2rem",
+      boxSizing: "border-box",
     }}
   >
     <CyanLoadingDots size="large" />

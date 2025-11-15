@@ -602,6 +602,9 @@ export function LoginPage() {
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
+                    padding: "0.5rem 0",
+                    minHeight: "50px",
+                    width: "100%",
                   }}
                 >
                   <CyanLoadingDots size="small" />

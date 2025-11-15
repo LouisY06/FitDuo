@@ -1,0 +1,142 @@
+/* BattleScreen.css - Bento Box Design */
+
+.battle-screen-container {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.battle-screen-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(150px, auto);
+  gap: 1rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 100%;
+}
+
+/* Header Section - Full Width */
+.battle-header-cell {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 0.5rem 0 1rem;
+}
+
+/* Stats Panel - Spans 2 columns */
+.battle-stats-cell {
+  grid-column: span 2;
+  grid-row: span 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+
+/* Info Text - Spans 2 columns, styled as card */
+.battle-info-cell {
+  grid-column: span 2;
+  grid-row: span 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  border: 1px solid rgba(99, 255, 0, 0.15);
+  padding: 1.25rem;
+  transition: all 0.3s ease;
+  min-height: 180px;
+}
+
+.battle-info-cell:hover {
+  border-color: rgba(99, 255, 0, 0.3);
+  background: rgba(17, 24, 39, 0.7);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Button Cell - Spans 2 columns, larger */
+.battle-button-cell {
+  grid-column: span 2;
+  grid-row: span 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: 0.5rem;
+}
+
+/* Loading State - Full Width */
+.battle-loading-cell {
+  grid-column: 1 / -1;
+  grid-row: span 1;
+  min-height: 300px;
+  background: rgba(17, 24, 39, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(99, 255, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Rivals Grid - Full Width */
+.battle-rivals-cell {
+  grid-column: 1 / -1;
+  grid-row: span 1;
+  padding: 0.5rem 0;
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+/* Responsive Bento Grid */
+@media (max-width: 968px) {
+  .battle-screen-bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.875rem;
+    grid-auto-rows: minmax(140px, auto);
+  }
+
+  .battle-stats-cell,
+  .battle-info-cell,
+  .battle-button-cell {
+    grid-column: span 2;
+    min-height: 160px;
+  }
+
+  .battle-header-cell {
+    padding: 0.5rem 0 0.75rem;
+  }
+
+  .battle-loading-cell {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 640px) {
+  .battle-screen-bento-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    grid-auto-rows: minmax(120px, auto);
+  }
+
+  .battle-stats-cell,
+  .battle-info-cell,
+  .battle-button-cell {
+    grid-column: span 1;
+    min-height: 140px;
+  }
+
+  .battle-button-cell {
+    min-height: 140px;
+  }
+
+  .battle-info-cell {
+    padding: 1rem;
+  }
+
+  .battle-loading-cell {
+    min-height: 220px;
+  }
+}

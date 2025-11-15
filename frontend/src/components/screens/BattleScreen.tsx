@@ -1,18 +1,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShimmerButton } from "../ShimmerComponents";
-import { CyanLoadingDots } from "../CyanLoadingDots";
+import { MatchmakingStats } from "../MatchmakingStats";
+import { ElectricButton } from "../ElectricButton";
+import { MatchmakingProgressCard } from "../MatchmakingProgressCard";
+import VantaHaloBackground from "../VantaHaloBackground";
 import { useMatchmaking } from "../../hooks/useMatchmaking";
 import type { MatchFoundPayload } from "../../services/matchmaking";
+import "./BattleScreen.css";
 
 export function BattleScreen() {
-  console.log("🔴 BattleScreen component rendered");
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState<number | null>(null);
-  
-  useEffect(() => {
-    console.log("🔴 BattleScreen mounted/updated");
-  });
 
   const {
     isSearching,
@@ -24,7 +22,7 @@ export function BattleScreen() {
   } = useMatchmaking({
     autoConnect: true,
     onMatchFound: (payload: MatchFoundPayload) => {
-      console.log("🎮 Match found in BattleScreen!", payload);
+      console.log("Match found!", payload);
       // Start countdown
       let cd = 3;
       setCountdown(cd);
@@ -36,7 +34,6 @@ export function BattleScreen() {
           clearInterval(interval);
           setCountdown(null);
           // Navigate to battle with game ID
-          console.log("🚀 Navigating to battle:", payload.game_id);
           navigate(`/app/battle/${payload.game_id}`);
         }
       }, 1000);
@@ -44,21 +41,12 @@ export function BattleScreen() {
   });
 
   const handleFindRival = async () => {
-    // Very visible logging
-    console.log("🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴");
-    console.log("🔴🔴🔴 Find Rival BUTTON CLICKED 🔴🔴🔴");
-    console.log("🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴");
     console.log("Find Rival clicked - starting matchmaking...");
-    
-    // Alert to confirm button works
-    alert("🔴 BUTTON CLICKED! Check console for logs.");
-    
     try {
-      console.log("🔴 Calling startSearching()...");
       await startSearching();
-      console.log("✅ Matchmaking started successfully");
+      console.log("Matchmaking started successfully");
     } catch (err) {
-      console.error("❌ Failed to start matchmaking:", err);
+      console.error("Failed to start matchmaking:", err);
       alert(`Failed to start matchmaking: ${(err as any)?.message || "Unknown error"}`);
     }
   };
@@ -82,30 +70,34 @@ export function BattleScreen() {
 
   if (countdown !== null) {
     return (
-      <div
-        style={{
-          height: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#020617",
-          color: "white",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <div
-            style={{
-              fontSize: "8rem",
-              fontFamily: "VT323, monospace",
-              color: "#63ff00",
-              fontWeight: "bold",
-            }}
-          >
-            {countdown}
+      <>
+        <VantaHaloBackground />
+        <div
+          style={{
+            height: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "white",
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: "8rem",
+                fontFamily: "VT323, monospace",
+                color: "#63ff00",
+                fontWeight: "bold",
+              }}
+            >
+              {countdown}
+            </div>
+            <p style={{ fontSize: "1.5rem", opacity: 0.8 }}>Get ready!</p>
           </div>
-          <p style={{ fontSize: "1.5rem", opacity: 0.8 }}>Get ready!</p>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -113,109 +105,84 @@ export function BattleScreen() {
   // This component only handles matchmaking and countdown
 
   return (
-    <div
-      style={{
-        padding: "2rem 1.5rem",
-        color: "white",
-        maxWidth: "800px",
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "calc(100vh - 200px)",
-      }}
-    >
-      <h1
-        className="audiowide-regular"
-        style={{
-          fontSize: "clamp(2rem, 5vw, 3rem)",
-          fontWeight: 400,
-          margin: 0,
-          marginBottom: "1rem",
-          color: "#63ff00",
-          textAlign: "center",
-        }}
-      >
-        Matchmaking Battles
-      </h1>
-      <p
-        style={{
-          opacity: 0.8,
-          marginBottom: "3rem",
-          textAlign: "center",
-          fontSize: "1.125rem",
-        }}
-      >
-        Get matched with a live rival. Best reps wins.
-      </p>
+    <>
+      <VantaHaloBackground />
+      <div className="matchmaking-page">
+        {isSearching ? (
+          <div className="matchmaking-loading-container">
+            {/* Header */}
+            <header className="matchmaking-header">
+              <h1 className="matchmaking-title">Matchmaking Battles</h1>
+              <p className="matchmaking-subtitle">
+                Get matched with a live rival. Best reps wins.
+              </p>
+            </header>
 
-      {error && !isSearching && (
-        <div style={{ 
-          padding: "1rem", 
-          backgroundColor: "rgba(255, 68, 68, 0.1)", 
-          border: "1px solid rgba(255, 68, 68, 0.3)",
-          borderRadius: "8px",
-          marginBottom: "1rem",
-          color: "#ff4444"
-        }}>
-          <p style={{ margin: 0, fontSize: "0.875rem" }}>{error}</p>
-          <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.75rem", opacity: 0.8 }}>
-            Check browser console (F12) for details
-          </p>
-        </div>
-      )}
-
-      {isSearching ? (
-        <div style={{ textAlign: "center" }}>
-          <CyanLoadingDots size="large" />
-          <p style={{ fontSize: "1.25rem", opacity: 0.9, marginTop: "1.5rem" }}>
-            Finding a rival...
-          </p>
-          {queueStatus && queueStatus.in_queue && (
-            <p style={{ fontSize: "0.875rem", opacity: 0.7, marginTop: "0.5rem" }}>
-              Position in queue: {queueStatus.queue_position} • 
-              Estimated wait: {queueStatus.estimated_wait}s
-            </p>
-          )}
-          {error && (
-            <p style={{ fontSize: "0.875rem", color: "#ff4444", marginTop: "0.5rem" }}>
-              {error}
-            </p>
-          )}
-          <div style={{ marginTop: "1.5rem" }}>
-            <ShimmerButton
-              variant="secondary"
-              onClick={handleCancel}
-            >
-              Cancel
-            </ShimmerButton>
+            {/* Matchmaking Progress Card */}
+            <div className="matchmaking-progress-wrapper">
+              <MatchmakingProgressCard
+                queuePosition={queueStatus?.queue_position}
+                estimatedWait={queueStatus?.estimated_wait}
+                error={error}
+                onCancel={handleCancel}
+              />
+            </div>
           </div>
-        </div>
-      ) : (
-        <ShimmerButton 
-          variant="success" 
-          onClick={() => {
-            console.log("🔴🔴🔴 BUTTON onClick EVENT FIRED 🔴🔴🔴");
-            handleFindRival();
-          }}
-          disabled={loading}
-        >
-          {loading ? "Joining queue..." : "Find a Rival"}
-        </ShimmerButton>
-      )}
+        ) : (
+          <>
+            {/* Header Section */}
+            <header className="matchmaking-header">
+              <h1 className="matchmaking-title">Matchmaking Battles</h1>
+              <p className="matchmaking-subtitle">
+                Get matched with a live rival. Best reps wins.
+              </p>
+            </header>
 
-      <p
-        style={{
-          marginTop: "2rem",
-          fontSize: "0.875rem",
-          opacity: 0.6,
-          textAlign: "center",
-        }}
-      >
-        We'll match you with similar level / intensity.
-      </p>
-    </div>
+            {/* Error Message */}
+            {error && !isSearching && (
+              <div className="matchmaking-error">
+                <p style={{ margin: 0, fontSize: "0.875rem", fontWeight: 500 }}>
+                  {error}
+                </p>
+                <p
+                  style={{
+                    margin: "0.5rem 0 0 0",
+                    fontSize: "0.75rem",
+                    opacity: 0.8,
+                  }}
+                >
+                  Check browser console (F12) for details
+                </p>
+              </div>
+            )}
+
+            {/* Hero Row - 2 Column Layout */}
+            <section className="matchmaking-hero">
+              {/* Left Column - Stats Cards */}
+              <div className="matchmaking-left">
+                <MatchmakingStats tier="Silver" mmr={1250} winRate={62} avgReps={38} />
+              </div>
+
+              {/* Right Column - Explanation Card with Halo Integration */}
+              <div className="matchmaking-right">
+                <div className="matchmaking-explanation-card">
+                  <p className="matchmaking-explanation-text">
+                    We use your tier, win rate, and average reps to match you with
+                    players at a similar level.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* CTA Section - Button centered under right column */}
+            <div className="matchmaking-cta">
+              <ElectricButton onClick={handleFindRival} disabled={loading}>
+                {loading ? "Joining queue..." : "Find a Rival"}
+              </ElectricButton>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 }
-
