@@ -44,9 +44,15 @@ export function BattleScreen() {
   });
 
   const handleFindRival = async () => {
+    // Very visible logging
+    console.log("🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴");
     console.log("🔴🔴🔴 Find Rival BUTTON CLICKED 🔴🔴🔴");
+    console.log("🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴");
     console.log("Find Rival clicked - starting matchmaking...");
-    alert("Button clicked! Check console for logs.");
+    
+    // Alert to confirm button works
+    alert("🔴 BUTTON CLICKED! Check console for logs.");
+    
     try {
       console.log("🔴 Calling startSearching()...");
       await startSearching();
