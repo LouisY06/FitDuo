@@ -29,9 +29,10 @@ function App() {
           }}
         >
           <h1
+            className="audiowide-regular"
             style={{
               fontSize: "clamp(2.5rem, 8vw, 5rem)",
-              fontWeight: 800,
+              fontWeight: 400,
               margin: 0,
               background: "linear-gradient(135deg, #63ff00 0%, #ffffff 100%)",
               WebkitBackgroundClip: "text",
@@ -92,7 +93,7 @@ function App() {
             <div style={{ fontSize: "3rem", marginBottom: "1rem", display: "flex", justifyContent: "center", color: "white" }}>
               <FaRunning size={48} />
             </div>
-            <h3 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.5rem", margin: 0 }}>
+            <h3 className="audiowide-regular" style={{ fontSize: "1.25rem", fontWeight: 400, marginBottom: "0.5rem", margin: 0 }}>
               General Workout
             </h3>
             <p style={{ fontSize: "0.9rem", opacity: 0.8, margin: 0 }}>
@@ -124,7 +125,7 @@ function App() {
             <div style={{ fontSize: "3rem", marginBottom: "1rem", display: "flex", justifyContent: "center", color: "white" }}>
               <FaStopwatch size={48} />
             </div>
-            <h3 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.5rem", margin: 0 }}>
+            <h3 className="audiowide-regular" style={{ fontSize: "1.25rem", fontWeight: 400, marginBottom: "0.5rem", margin: 0 }}>
               Time Trials
             </h3>
             <p style={{ fontSize: "0.9rem", opacity: 0.8, margin: 0 }}>
@@ -157,7 +158,7 @@ function App() {
             <div style={{ fontSize: "3rem", marginBottom: "1rem", display: "flex", justifyContent: "center", color: "#63ff00" }}>
               <FaFistRaised size={48} />
             </div>
-            <h3 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.5rem", margin: 0, color: "#63ff00" }}>
+            <h3 className="audiowide-regular" style={{ fontSize: "1.25rem", fontWeight: 400, marginBottom: "0.5rem", margin: 0, color: "#63ff00" }}>
               Battle Mode
             </h3>
             <p style={{ fontSize: "0.9rem", opacity: 0.9, margin: 0 }}>
@@ -189,7 +190,7 @@ function App() {
             <div style={{ fontSize: "3rem", marginBottom: "1rem", display: "flex", justifyContent: "center", color: "white" }}>
               <FaDumbbell size={48} />
             </div>
-            <h3 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.5rem", margin: 0 }}>
+            <h3 className="audiowide-regular" style={{ fontSize: "1.25rem", fontWeight: 400, marginBottom: "0.5rem", margin: 0 }}>
               AI Training
             </h3>
             <p style={{ fontSize: "0.9rem", opacity: 0.8, margin: 0 }}>
