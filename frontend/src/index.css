@@ -34,6 +34,12 @@ h1 {
   line-height: 1.1;
 }
 
+.audiowide-regular {
+  font-family: "Audiowide", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
 button {
   border-radius: 8px;
   border: 1px solid transparent;
