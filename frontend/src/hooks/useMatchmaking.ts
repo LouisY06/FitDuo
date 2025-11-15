@@ -65,24 +65,32 @@ export function useMatchmaking(
   // Connect to matchmaking WebSocket when searching
   useEffect(() => {
     if (isSearching && playerIdRef.current && autoConnect) {
+      console.log(`🔌 Connecting to matchmaking WebSocket for player ${playerIdRef.current}`);
       const ws = new MatchmakingWebSocket(playerIdRef.current);
       wsRef.current = ws;
 
       if (onMatchFound) {
+        console.log("✅ Registering onMatchFound callback");
         ws.onMatchFound(onMatchFound);
       } else {
+        console.warn("⚠️ No onMatchFound provided, using default handler");
         // Default handler: log match found
         ws.onMatchFound((payload) => {
           console.log("Match found!", payload);
         });
       }
 
-      ws.connect().catch((err) => {
-        console.error("Failed to connect to matchmaking WebSocket:", err);
-        setError("Failed to connect to matchmaking service");
-      });
+      ws.connect()
+        .then(() => {
+          console.log("✅ Matchmaking WebSocket connected successfully");
+        })
+        .catch((err) => {
+          console.error("❌ Failed to connect to matchmaking WebSocket:", err);
+          setError("Failed to connect to matchmaking service");
+        });
 
       return () => {
+        console.log("🔌 Disconnecting matchmaking WebSocket");
         ws.disconnect();
         wsRef.current = null;
       };
