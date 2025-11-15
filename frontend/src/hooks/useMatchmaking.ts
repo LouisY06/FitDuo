@@ -125,11 +125,17 @@ export function useMatchmaking(
         }
       }
 
-      console.log("Joining queue...");
-      const status = await joinQueue(exerciseId);
-      console.log("Queue status:", status);
-      setQueueStatus(status);
-      setIsSearching(true);
+      console.log("📥 Joining queue...", { exerciseId, playerId: playerIdRef.current });
+      try {
+        const status = await joinQueue(exerciseId);
+        console.log("✅ Queue status received:", status);
+        setQueueStatus(status);
+        setIsSearching(true);
+        console.log("✅ Matchmaking started, isSearching set to true");
+      } catch (error) {
+        console.error("❌ Error joining queue:", error);
+        throw error;
+      }
 
       // Poll for queue status updates
       const pollInterval = setInterval(async () => {

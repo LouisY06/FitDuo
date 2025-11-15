@@ -38,14 +38,16 @@ export async function joinQueue(
     if (exerciseId) {
       request.exercise_id = exerciseId;
     }
-    console.log("joinQueue called with:", request);
+    console.log("📤 joinQueue called with:", request);
     const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-    console.log("API URL:", API_BASE_URL);
+    console.log("🌐 API URL:", API_BASE_URL);
+    console.log("📡 Making POST request to /api/matchmaking/queue");
     const result = await apiPost<QueueStatus>("/api/matchmaking/queue", request);
-    console.log("joinQueue result:", result);
+    console.log("✅ joinQueue result:", result);
     return result;
   } catch (error) {
-    console.error("joinQueue error:", error);
+    console.error("❌ joinQueue error:", error);
+    console.error("❌ Error details:", JSON.stringify(error, null, 2));
     throw error as ApiError;
   }
 }
