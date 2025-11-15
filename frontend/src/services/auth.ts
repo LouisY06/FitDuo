@@ -13,6 +13,7 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   GoogleAuthProvider,
+  updateProfile,
   type User,
 } from "firebase/auth";
 import { auth } from "../config/firebase";
@@ -188,7 +189,7 @@ export async function signUp(credentials: SignUpCredentials): Promise<AuthRespon
 
     // Update display name if provided
     if (credentials.username) {
-      await userCredential.user.updateProfile({
+      await updateProfile(userCredential.user, {
         displayName: credentials.username,
       });
     }

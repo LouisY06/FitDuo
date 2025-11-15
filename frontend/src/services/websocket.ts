@@ -33,6 +33,7 @@ export type WebSocketMessageType =
   | "ROUND_START"
   | "ROUND_END"
   | "FORM_RULES"
+  | "EXERCISE_SELECTED"
   | "PING"
   | "PONG"
   | "ERROR"
