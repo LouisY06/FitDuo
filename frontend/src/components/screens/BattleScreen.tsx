@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShimmerButton } from "../ShimmerComponents";
 import { CyanLoadingDots } from "../CyanLoadingDots";
-import { useMatchmaking, type MatchFoundPayload } from "../../hooks/useMatchmaking";
+import { useMatchmaking } from "../../hooks/useMatchmaking";
+import type { MatchFoundPayload } from "../../services/matchmaking";
 
 export function BattleScreen() {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState<number | null>(null);
-  const [matchInfo, setMatchInfo] = useState<MatchFoundPayload | null>(null);
 
   const {
     isSearching,
@@ -18,9 +18,8 @@ export function BattleScreen() {
     stopSearching,
   } = useMatchmaking({
     autoConnect: true,
-    onMatchFound: (payload) => {
+    onMatchFound: (payload: MatchFoundPayload) => {
       console.log("Match found!", payload);
-      setMatchInfo(payload);
       // Start countdown
       let cd = 3;
       setCountdown(cd);
@@ -169,13 +168,14 @@ export function BattleScreen() {
               {error}
             </p>
           )}
-          <ShimmerButton
-            variant="danger"
-            onClick={handleCancel}
-            style={{ marginTop: "1.5rem" }}
-          >
-            Cancel
-          </ShimmerButton>
+          <div style={{ marginTop: "1.5rem" }}>
+            <ShimmerButton
+              variant="secondary"
+              onClick={handleCancel}
+            >
+              Cancel
+            </ShimmerButton>
+          </div>
         </div>
       ) : (
         <ShimmerButton 
