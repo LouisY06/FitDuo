@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import Optional
 import os
 
@@ -11,12 +12,8 @@ class Settings(BaseSettings):
     
     # CORS Configuration
     # Can be set via CORS_ORIGINS env var (comma-separated)
-    cors_origins: list[str] = [
-        "http://localhost:5173",  # Vite default
-        "http://localhost:5174",  # Vite alternative port
-        "http://localhost:3000",  # Alternative dev port
-        "http://localhost:8080",  # Alternative dev port
-    ]
+    # Default to localhost for development
+    cors_origins: str = "http://localhost:5173,http://localhost:5174,http://localhost:3000,http://localhost:8080"
     
     # Database (will be configured later)
     database_url: Optional[str] = None
@@ -33,13 +30,21 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = False
     
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Override CORS origins from environment variable if provided
-        cors_env = os.getenv("CORS_ORIGINS")
-        if cors_env:
-            # Parse comma-separated string
-            self.cors_origins = [origin.strip() for origin in cors_env.split(",")]
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        """Parse CORS_ORIGINS from environment variable or use default"""
+        if isinstance(v, str):
+            # Split comma-separated string and strip whitespace
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
+    
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Get CORS origins as a list"""
+        if isinstance(self.cors_origins, list):
+            return self.cors_origins
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 settings = Settings()
