@@ -195,10 +195,8 @@ export function BattleScreen() {
       ) : (
         <ShimmerButton 
           variant="success" 
-          onClick={(e) => {
+          onClick={() => {
             console.log("🔴🔴🔴 BUTTON onClick EVENT FIRED 🔴🔴🔴");
-            e.preventDefault();
-            e.stopPropagation();
             handleFindRival();
           }}
           disabled={loading}
