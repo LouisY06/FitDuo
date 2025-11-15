@@ -73,10 +73,15 @@ class MatchmakingQueue:
             )
             
             self.queue[player_id] = queued_player
-            logger.info(f"Player {player_id} added to matchmaking queue (total in queue: {len(self.queue)})")
+            queue_size = len(self.queue)
+            logger.info(f"Player {player_id} added to matchmaking queue (total in queue: {queue_size})")
             
             # Try to find a match immediately (async, don't wait)
             asyncio.create_task(self._try_match_and_notify(player_id, session))
+            
+            # Also try matching all players in queue periodically
+            if queue_size >= 2:
+                asyncio.create_task(self._try_match_all_players(session))
             
             return True
     
@@ -171,17 +176,22 @@ class MatchmakingQueue:
                 best_score = score
                 best_match = opponent
         
-        # If we found a good match, create the game session
-        if best_match and best_score < self.match_threshold:
-            return await self._create_match(player, best_match, session)
+        # If we found a match, create the game session
+        # Lower threshold for easier matching (especially for new players)
+        effective_threshold = self.match_threshold
         
         # If no match found and we haven't expanded search, mark for expansion
-        if not player.search_range_expanded and best_score >= self.match_threshold:
+        if not player.search_range_expanded and best_score >= effective_threshold:
             player.search_range_expanded = True
             # Expand match threshold temporarily
-            expanded_threshold = self.match_threshold * 1.5
-            if best_match and best_score < expanded_threshold:
-                return await self._create_match(player, best_match, session)
+            effective_threshold = self.match_threshold * 2.0
+        
+        # Match if we have an opponent and score is acceptable
+        if best_match and best_score < effective_threshold:
+            logger.info(f"Match found! Player {player_id} vs Player {best_match.player_id} (score: {best_score:.2f})")
+            return await self._create_match(player, best_match, session)
+        elif best_match:
+            logger.debug(f"No match yet for player {player_id}. Best score: {best_score:.2f} (threshold: {effective_threshold:.2f})")
         
         return None
     
