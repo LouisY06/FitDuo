@@ -6,8 +6,13 @@ import { useMatchmaking } from "../../hooks/useMatchmaking";
 import type { MatchFoundPayload } from "../../services/matchmaking";
 
 export function BattleScreen() {
+  console.log("🔴 BattleScreen component rendered");
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState<number | null>(null);
+  
+  useEffect(() => {
+    console.log("🔴 BattleScreen mounted/updated");
+  });
 
   const {
     isSearching,
@@ -39,12 +44,15 @@ export function BattleScreen() {
   });
 
   const handleFindRival = async () => {
+    console.log("🔴🔴🔴 Find Rival BUTTON CLICKED 🔴🔴🔴");
     console.log("Find Rival clicked - starting matchmaking...");
+    alert("Button clicked! Check console for logs.");
     try {
+      console.log("🔴 Calling startSearching()...");
       await startSearching();
-      console.log("Matchmaking started successfully");
+      console.log("✅ Matchmaking started successfully");
     } catch (err) {
-      console.error("Failed to start matchmaking:", err);
+      console.error("❌ Failed to start matchmaking:", err);
       alert(`Failed to start matchmaking: ${(err as any)?.message || "Unknown error"}`);
     }
   };
