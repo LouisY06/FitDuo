@@ -5,6 +5,8 @@ import firebase_admin
 from firebase_admin import credentials, auth
 from app.config import settings
 import logging
+import json
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -12,9 +14,27 @@ logger = logging.getLogger(__name__)
 firebase_app = None
 if settings.firebase_credentials:
     try:
-        cred = credentials.Certificate(settings.firebase_credentials)
+        # Handle both file path and JSON string from environment variable
+        cred_value = settings.firebase_credentials
+        
+        # Check if it's a JSON string (starts with {) or a file path
+        if cred_value.strip().startswith('{'):
+            # It's a JSON string - parse it
+            cred_dict = json.loads(cred_value)
+            cred = credentials.Certificate(cred_dict)
+        elif os.path.isfile(cred_value):
+            # It's a file path
+            cred = credentials.Certificate(cred_value)
+        else:
+            # Try parsing as JSON string anyway
+            cred_dict = json.loads(cred_value)
+            cred = credentials.Certificate(cred_dict)
+        
         firebase_app = firebase_admin.initialize_app(cred)
         logger.info("Firebase Admin initialized successfully")
+    except json.JSONDecodeError as e:
+        logger.error(f"Firebase credentials JSON parsing failed: {e}")
+        logger.warning("Firebase Admin initialization failed - invalid JSON format")
     except Exception as e:
         logger.warning(f"Firebase Admin initialization failed: {e}")
 elif settings.environment == "development":
