@@ -156,11 +156,9 @@ export function useMatchmaking(
           const updatedStatus = await getQueueStatus();
           setQueueStatus(updatedStatus);
 
-          // If no longer in queue, stop searching
-          if (!updatedStatus.in_queue) {
-            setIsSearching(false);
-            clearInterval(pollInterval);
-          }
+          // Don't auto-stop when removed from queue - let match notification handle it
+          // (Players are removed from queue when matched, but need to stay connected
+          // to receive the MATCH_FOUND notification)
         } catch (err) {
           console.error("Error polling queue status:", err);
         }
