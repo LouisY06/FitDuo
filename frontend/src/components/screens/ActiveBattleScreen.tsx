@@ -13,6 +13,7 @@ import { useGameWebSocket } from "../../hooks/useGameWebSocket";
 import { getCurrentUser } from "../../services/auth";
 import { auth } from "../../config/firebase";
 import type { GameState } from "../../services/websocket";
+import { apiGet } from "../../services/api";
 
 type ExerciseType = "push-up" | "squat" | "plank" | "lunge";
 
@@ -173,17 +174,96 @@ export function ActiveBattleScreen() {
     fetchUser();
   }, []);
 
+  // HTTP fallback: Fetch game state if WebSocket fails or hasn't connected after 3 seconds
+  useEffect(() => {
+    if (!gameId || !playerId || gameState) return; // Already have game state
+
+    let cancelled = false;
+    const timeout = setTimeout(async () => {
+      // Double-check that we still don't have game state (in case WebSocket connected in the meantime)
+      if (cancelled) return;
+      
+      try {
+        console.log(`🔄 WebSocket not connected, fetching game state via HTTP for game ${gameId}...`);
+        const matchData = await apiGet<{
+          id: number;
+          player_a_id: number;
+          player_b_id: number;
+          player_a_score: number;
+          player_b_score: number;
+          current_round: number;
+          status: string;
+          current_exercise_id: number | null;
+        }>(`/api/matches/${gameId}`);
+        
+        // Check again if we got game state from WebSocket while fetching
+        if (cancelled) return;
+        
+        // Convert match API response to GameState format
+        const fallbackGameState: GameState = {
+          gameId: matchData.id,
+          playerA: {
+            id: matchData.player_a_id,
+            score: matchData.player_a_score,
+          },
+          playerB: {
+            id: matchData.player_b_id,
+            score: matchData.player_b_score,
+          },
+          currentRound: matchData.current_round,
+          status: matchData.status,
+          exerciseId: matchData.current_exercise_id,
+        };
+        
+        console.log(`✅ Fetched game state via HTTP fallback:`, fallbackGameState);
+        setGameState(fallbackGameState);
+        setCurrentRound(fallbackGameState.currentRound || 1);
+        
+        // If exercise is already selected, set it
+        if (fallbackGameState.exerciseId) {
+          const exerciseIdMap: Record<number, ExerciseType> = {
+            1: "push-up",
+            2: "squat",
+            3: "plank",
+            4: "lunge",
+          };
+          const exercise = exerciseIdMap[fallbackGameState.exerciseId];
+          if (exercise) {
+            setSelectedExercise(exercise);
+            setShowExerciseSelection(false);
+          }
+        }
+      } catch (error) {
+        console.error("❌ Failed to fetch game state via HTTP fallback:", error);
+      }
+    }, 3000); // Wait 3 seconds before trying HTTP fallback
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [gameId, playerId, gameState]);
+
   // Coin flip logic - determine who chooses first (only for round 1)
   useEffect(() => {
-    if (!playerId || !gameState || coinFlipResult !== null) return;
+    if (!playerId || !gameState || coinFlipResult !== null) {
+      if (!playerId) console.log("⏳ Coin flip: Waiting for playerId...");
+      if (!gameState) console.log("⏳ Coin flip: Waiting for gameState...");
+      if (coinFlipResult !== null) console.log("✅ Coin flip: Already completed");
+      return;
+    }
     
     // Only do coin flip at the start of round 1
     const currentRoundNum = gameState.currentRound || 1;
     if (currentRoundNum !== 1) {
+      console.log(`⏭️ Coin flip: Skipping (round ${currentRoundNum}, not round 1)`);
       setShowCoinFlip(false);
+      setShowExerciseSelection(true); // Show exercise selection for later rounds
       return;
     }
 
+    console.log("🎲 Starting coin flip logic...");
+    
     // Perform coin flip: randomly choose between playerA and playerB
     const isPlayerA = gameState.playerA.id === playerId;
     const otherPlayerId = isPlayerA ? gameState.playerB.id : gameState.playerA.id;
@@ -193,19 +273,26 @@ export function ActiveBattleScreen() {
     const flipSeed = (gameId ? parseInt(gameId) : 0) + playerId + otherPlayerId;
     const flipResult = flipSeed % 2 === 0 ? gameState.playerA.id : gameState.playerB.id;
     
+    console.log(`🎲 Coin flip result: Player ${flipResult} chooses first (seed: ${flipSeed})`);
+    
     setCoinFlipResult(flipResult);
     setWhoseTurnToChoose(flipResult);
+    setShowCoinFlip(true); // Ensure coin flip screen is shown
     
     // If it's this player's turn, show exercise selection after coin flip animation
     if (flipResult === playerId) {
+      console.log("✅ It's your turn to choose! Will show exercise selection in 3 seconds...");
       setTimeout(() => {
         setShowCoinFlip(false);
         setShowExerciseSelection(true);
+        console.log("✅ Exercise selection screen should now be visible");
       }, 3000); // Show coin flip for 3 seconds
     } else {
+      console.log("⏳ Waiting for opponent to choose... Will show waiting screen in 3 seconds...");
       setTimeout(() => {
         setShowCoinFlip(false);
         setShowExerciseSelection(true); // Show waiting screen
+        console.log("✅ Waiting screen should now be visible");
       }, 3000);
     }
   }, [playerId, gameState, coinFlipResult, gameId]);
@@ -834,6 +921,7 @@ export function ActiveBattleScreen() {
 
   // Handle exercise selection
   const handleExerciseSelect = useCallback((exercise: ExerciseType) => {
+    console.log(`✅ Exercise selected: ${exercise}`);
     setSelectedExercise(exercise);
     setShowExerciseSelection(false);
     setGamePhase("ready"); // Start ready phase
@@ -2168,11 +2256,13 @@ export function ActiveBattleScreen() {
 
   // Exercise Selection Screen (only show if it's this player's turn)
   // Also check that we haven't received ROUND_START yet
-  if (showExerciseSelection && !selectedExercise && whoseTurnToChoose === playerId && gamePhase !== "ready" && gamePhase !== "countdown" && gamePhase !== "live") {
+  // Show if we're not in active game phases (countdown/live) - allow "ready" and "ended" phases
+  if (showExerciseSelection && !selectedExercise && whoseTurnToChoose === playerId && gamePhase !== "countdown" && gamePhase !== "live") {
     // If we have roundEndData (meaning a round just ended), we're selecting for the NEXT round
     // so display currentRound + 1. Otherwise (first round), display currentRound
     const hasCompletedAnyRound = roundEndData !== null;
     const displayRound = hasCompletedAnyRound ? currentRound + 1 : currentRound;
+    console.log("✅ Rendering exercise selection screen (your turn to choose)");
     return (
       <>
         <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />
@@ -2287,7 +2377,8 @@ export function ActiveBattleScreen() {
 
   // Waiting for opponent to choose exercise (only show if exercise not yet selected)
   // Also check that we haven't received ROUND_START yet (which would set selectedExercise)
-  if (showExerciseSelection && !selectedExercise && whoseTurnToChoose !== playerId && whoseTurnToChoose !== null && gamePhase !== "ready" && gamePhase !== "countdown" && gamePhase !== "live") {
+  // Show if we're not in active game phases (countdown/live) - allow "ready" and "ended" phases
+  if (showExerciseSelection && !selectedExercise && whoseTurnToChoose !== playerId && whoseTurnToChoose !== null && gamePhase !== "countdown" && gamePhase !== "live") {
     // If we have roundEndData (meaning a round just ended), we're waiting for the NEXT round
     // so display currentRound + 1. Otherwise (first round), display currentRound
     const hasCompletedAnyRound = roundEndData !== null;
