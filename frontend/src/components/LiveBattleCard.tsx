@@ -63,11 +63,11 @@ export const LiveBattleCard: React.FC<LiveBattleProps> = ({
 
   const statusText =
     state === "countdown"
-      ? "Match starts when this hits zero. You have 3:00 to do as many reps as you can."
+      ? "Match starts when this hits zero. You have 1:00 to do as many reps as you can."
       : state === "live"
       ? mode === "reps"
         ? "Do as many clean reps as you can before time runs out."
-        : "Hold your position as long as you can, up to 3:00."
+        : "Hold your position as long as you can, up to 1:00."
       : state === "ended_time"
       ? "Time is up. Waiting for final scores…"
       : "No movement for 10 seconds. Match ended.";
@@ -228,13 +228,13 @@ export const LiveBattleCard: React.FC<LiveBattleProps> = ({
         <p className="font-medium mb-1">Game rules</p>
         {mode === "reps" ? (
           <p className="text-slate-400">
-            You have 3 minutes to do as many reps as possible. Highest rep
-            count wins. If both players stop moving for more than 10 seconds,
-            the game ends and both lose.
+            You have 1 minute to do as many reps as possible. Highest rep count
+            wins. If both players stop moving for more than 10 seconds, the
+            game ends and both lose.
           </p>
         ) : (
           <p className="text-slate-400">
-            You have up to 3 minutes to hold your position. Your score is your
+            You have up to 1 minute to hold your position. Your score is your
             longest continuous hold. If both players drop and don&apos;t resume
             within 10 seconds, the game ends and both lose.
           </p>

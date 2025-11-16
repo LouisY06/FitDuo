@@ -22,9 +22,9 @@ export function ActiveBattleScreen() {
               gameId={gameId}
               mode="reps"
               state="countdown"
-              durationSeconds={180}
-              countdownRemaining={180}
-              timeRemaining={180}
+              durationSeconds={60}
+              countdownRemaining={60}
+              timeRemaining={60}
               userMetric={0}
               opponentMetric={0}
               opponentName="Rival"
