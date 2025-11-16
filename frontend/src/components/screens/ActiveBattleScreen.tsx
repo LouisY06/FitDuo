@@ -539,8 +539,10 @@ export function ActiveBattleScreen() {
     matchWinnerId?: number | null;
     narrative: string;
     strategy: Record<string, unknown>;
+    currentRound?: number;
   }) => {
     console.log("🏁 Round ended:", data);
+    console.log(`📊 Current round when ending: ${currentRound}, from data: ${data.currentRound}`);
     
     // Update round wins (frontend tracking)
     if (data.winnerId === playerId) {
@@ -560,8 +562,12 @@ export function ActiveBattleScreen() {
     setShowRoundEnd(true);
     setRoundEndCountdown(5); // Reset countdown
     
-    // Check if someone won 2 rounds (best of 3 winner) OR if this was round 3
-    const gameIsOver = newUserRoundsWon >= 2 || newOpponentRoundsWon >= 2 || currentRound >= 3;
+    // Use the round number from the backend message (which is the round that just ended)
+    const roundThatJustEnded = data.currentRound || currentRound;
+    console.log(`🔍 Round that just ended: ${roundThatJustEnded}, User wins: ${newUserRoundsWon}, Opponent wins: ${newOpponentRoundsWon}`);
+    
+    // Check if someone won 2 rounds (best of 3 winner) OR if we just completed round 3
+    const gameIsOver = newUserRoundsWon >= 2 || newOpponentRoundsWon >= 2 || roundThatJustEnded >= 3;
     
     if (gameIsOver) {
       console.log(`🎉 Game Over! Final score - You: ${newUserRoundsWon}, Opponent: ${newOpponentRoundsWon}`);
