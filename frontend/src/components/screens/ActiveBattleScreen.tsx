@@ -374,6 +374,9 @@ export function ActiveBattleScreen() {
         // Start the game!
         setGamePhase("live");
         setTimeRemaining(60);
+        // CRITICAL: Reset inactivity timer ONLY when game goes live (after countdown completes)
+        setLastRepTime(Date.now());
+        console.log("🎮 Game is now LIVE - inactivity timer started");
       }
     };
 
@@ -410,8 +413,9 @@ export function ActiveBattleScreen() {
     }
 
     // Reset timer to full duration when game becomes live
+    // NOTE: lastRepTime is now set when countdown completes (in countdown useEffect)
+    // to ensure inactivity timer only starts after the 5-second countdown
     setTimeRemaining(durationSeconds);
-    setLastRepTime(Date.now()); // Reset inactivity timer when round starts
 
     let intervalCleared = false;
     const interval = setInterval(() => {
