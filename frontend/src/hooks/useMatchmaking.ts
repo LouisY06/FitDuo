@@ -45,6 +45,7 @@ export function useMatchmaking(
 
   const wsRef = useRef<MatchmakingWebSocket | null>(null);
   const playerIdRef = useRef<number | null>(null);
+  const isJoiningRef = useRef<boolean>(false); // Prevent multiple simultaneous join requests
 
   // Get current user ID
   useEffect(() => {
@@ -112,7 +113,20 @@ export function useMatchmaking(
   // Start searching for a match
   const startSearching = useCallback(async (exerciseId?: number) => {
     console.log("🔴🔴🔴 startSearching() CALLED 🔴🔴🔴", { exerciseId, playerId: playerIdRef.current });
+    
+    // Prevent multiple simultaneous join requests (idempotency)
+    if (isJoiningRef.current) {
+      console.warn("⚠️ Already joining queue, ignoring duplicate request");
+      return;
+    }
+    
+    if (isSearching) {
+      console.warn("⚠️ Already searching, ignoring duplicate request");
+      return;
+    }
+    
     try {
+      isJoiningRef.current = true;
       console.log("startSearching called", { exerciseId, playerId: playerIdRef.current });
       setLoading(true);
       setError(null);
@@ -183,9 +197,10 @@ export function useMatchmaking(
       // Re-throw the error so the caller knows it failed
       throw err;
     } finally {
+      isJoiningRef.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [isSearching]);
 
   // Stop searching
   const stopSearching = useCallback(async () => {

@@ -60,8 +60,9 @@ class MatchmakingQueue:
         Note: Creates its own database session for async matching operations.
         """
         async with self.lock:
+            # Check and add atomically to prevent race conditions
             if player_id in self.queue:
-                logger.warning(f"Player {player_id} already in queue")
+                logger.warning(f"Player {player_id} already in queue (idempotent request ignored)")
                 return False
             
             queued_player = QueuedPlayer(
@@ -73,9 +74,10 @@ class MatchmakingQueue:
                 exercise_id=exercise_id,
             )
             
-        self.queue[player_id] = queued_player
-        queue_size = len(self.queue)
-        logger.info(f"Player {player_id} added to matchmaking queue (total in queue: {queue_size})")
+            # Add to queue inside the lock to make it atomic
+            self.queue[player_id] = queued_player
+            queue_size = len(self.queue)
+            logger.info(f"Player {player_id} added to matchmaking queue (total in queue: {queue_size})")
         
         # Wait for WebSocket to connect, then try matching
         async def wait_for_websocket_then_match():
