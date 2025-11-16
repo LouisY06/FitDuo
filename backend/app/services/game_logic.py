@@ -2,6 +2,7 @@ from sqlmodel import Session, select
 from app.models import GameSession, GameStatus, Exercise
 from app.services.connection_manager import ConnectionManager
 from app.services.llm_service import llm_service
+from app.services.user_stats_service import update_user_stats_after_game
 from datetime import datetime
 
 
@@ -164,6 +165,56 @@ async def handle_round_end(
 
     # Broadcast updated game state
     await broadcast_game_state(game_session, manager, game_id)
+    
+    # Check if game is over (round 3 or someone won 2 rounds) and update stats
+    # This is simple tracking - we'll need to add round wins to GameSession model later
+    # For now, update stats after each round
+    if winner_id:
+        # Get exercise name for tracking bests
+        exercise = session.get(Exercise, game_session.current_exercise_id) if game_session.current_exercise_id else None
+        exercise_name = exercise.name if exercise else "Unknown"
+        
+        # Update stats for winner
+        await update_user_stats_after_game(
+            user_id=winner_id,
+            won=True,
+            tied=False,
+            total_reps=winner_score,
+            exercise_name=exercise_name,
+            session=session,
+        )
+        
+        # Update stats for loser
+        await update_user_stats_after_game(
+            user_id=loser_id,
+            won=False,
+            tied=False,
+            total_reps=loser_score,
+            exercise_name=exercise_name,
+            session=session,
+        )
+    else:
+        # Tie - update both players with tie
+        exercise = session.get(Exercise, game_session.current_exercise_id) if game_session.current_exercise_id else None
+        exercise_name = exercise.name if exercise else "Unknown"
+        
+        await update_user_stats_after_game(
+            user_id=game_session.player_a_id,
+            won=False,
+            tied=True,
+            total_reps=game_session.player_a_score,
+            exercise_name=exercise_name,
+            session=session,
+        )
+        
+        await update_user_stats_after_game(
+            user_id=game_session.player_b_id,
+            won=False,
+            tied=True,
+            total_reps=game_session.player_b_score,
+            exercise_name=exercise_name,
+            session=session,
+        )
 
 
 async def start_next_round(

@@ -1,4 +1,4 @@
-import { BottomNavBar } from "./BottomNavBar";
+// BottomNavBar removed - using AppShell navigation instead
 
 export function FitnessTrackerScreen() {
   return (
@@ -232,8 +232,7 @@ export function FitnessTrackerScreen() {
         </div>
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <BottomNavBar />
+      {/* Bottom Navigation Bar removed - using AppShell navigation */}
     </div>
   );
 }

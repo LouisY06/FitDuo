@@ -344,6 +344,23 @@ export default function RadialOrbitalProfileTimeline({
                         <div className="space-y-3">
                           <p>{item.content}</p>
                           <div className="pt-1 border-t border-white/10 space-y-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[0.65rem] uppercase tracking-[0.16em] text-neutral-400">
+                                Recent Matches
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 px-2 py-0 text-[0.6rem] rounded-full border-white/30 bg-transparent hover:bg-white/10 text-white/80 hover:text-white"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate("/history");
+                                }}
+                              >
+                                Open full history
+                              </Button>
+                            </div>
+
                             {loadingBattleHistory && (
                               <p className="text-[0.7rem] text-white/60">
                                 Loading recent matches...
@@ -366,22 +383,6 @@ export default function RadialOrbitalProfileTimeline({
                               !battleHistoryError &&
                               recentBattleWorkouts.length > 0 && (
                                 <div className="space-y-1">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="text-[0.65rem] uppercase tracking-[0.16em] text-neutral-400">
-                                      Recent Matches
-                                    </span>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-6 px-2 py-0 text-[0.6rem] rounded-full border-white/30 bg-transparent hover:bg-white/10 text-white/80 hover:text-white"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate("/history");
-                                      }}
-                                    >
-                                      Open full history
-                                    </Button>
-                                  </div>
                                   <div className="flex justify-between text-[0.65rem] text-white/60 font-mono">
                                     <span>Date</span>
                                     <span className="flex-1 ml-2">

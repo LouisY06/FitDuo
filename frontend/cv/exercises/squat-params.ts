@@ -343,17 +343,8 @@ export function checkKneeAlignment(landmarks: PoseLandmark[]): {
 } {
   // Check if knees track in line with toes
   // Calculate angle between hip-knee-ankle line and vertical
-  const leftKneeAngle = calculateAngle(
-    landmarks[SQUAT_LANDMARKS.LEFT_HIP],
-    landmarks[SQUAT_LANDMARKS.LEFT_KNEE],
-    landmarks[SQUAT_LANDMARKS.LEFT_ANKLE]
-  );
-  
-  const rightKneeAngle = calculateAngle(
-    landmarks[SQUAT_LANDMARKS.RIGHT_HIP],
-    landmarks[SQUAT_LANDMARKS.RIGHT_KNEE],
-    landmarks[SQUAT_LANDMARKS.RIGHT_ANKLE]
-  );
+  // const leftKneeAngle = calculateAngle(...); // Unused for now
+  // const rightKneeAngle = calculateAngle(...); // Unused for now
   
   // Check if knee collapses inward (valgus)
   // Knee should be aligned with ankle (knee X should be close to ankle X)
@@ -384,19 +375,17 @@ export function checkKneeAlignment(landmarks: PoseLandmark[]): {
  * @param landmarks - Array of pose landmarks
  * @returns Object with posture status
  */
-export function checkTorsoPosture(landmarks: PoseLandmark[]): {
+export function checkTorsoPosture(_landmarks: PoseLandmark[]): {
   isValid: boolean;
   error?: string;
 } {
   // Calculate shoulder-hip angle (should be relatively vertical)
-  const shoulderMidY = (landmarks[SQUAT_LANDMARKS.LEFT_SHOULDER].y + 
-                    landmarks[SQUAT_LANDMARKS.RIGHT_SHOULDER].y) / 2;
-  const hipMidY = (landmarks[SQUAT_LANDMARKS.LEFT_HIP].y + 
-                   landmarks[SQUAT_LANDMARKS.RIGHT_HIP].y) / 2;
+  // const shoulderMidY = (landmarks[SQUAT_LANDMARKS.LEFT_SHOULDER].y + landmarks[SQUAT_LANDMARKS.RIGHT_SHOULDER].y) / 2;
+  // const hipMidY = (landmarks[SQUAT_LANDMARKS.LEFT_HIP].y + landmarks[SQUAT_LANDMARKS.RIGHT_HIP].y) / 2;
   
   // Torso should maintain relatively neutral position
   // Check if torso is leaning too far forward or backward
-  const torsoAngle = Math.abs(shoulderMidY - hipMidY);
+  // const torsoAngle = Math.abs(shoulderMidY - hipMidY); // Unused for now
   
   // Threshold: torso should be within reasonable range (not too forward/back)
   // This is a simplified check - in practice, you'd calculate actual angle
@@ -525,9 +514,7 @@ export const SQUAT_FORM_RULES = {
     min: SQUAT_REP_PARAMS.KNEE_ANGLE_MIN,
     max: SQUAT_REP_PARAMS.KNEE_ANGLE_MAX,
   },
-  hip_depth: {
-    required: SQUAT_REP_PARAMS.HIP_DEPTH_REQUIRED,
-  },
+  // hip_depth validation is handled in the form validation logic directly
 } as const;
 
 /**

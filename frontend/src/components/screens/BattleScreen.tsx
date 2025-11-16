@@ -6,14 +6,15 @@ import { MatchmakingProgressCard } from "../MatchmakingProgressCard";
 import VantaHaloBackground from "../VantaHaloBackground";
 import { useMatchmaking } from "../../hooks/useMatchmaking";
 import type { MatchFoundPayload } from "../../services/matchmaking";
+import { getCurrentUser } from "../../services/auth";
+import { userStatsAPI, type UserStats } from "../../services/api";
 import "./BattleScreen.css";
-import { usePlayerStats } from "../../hooks/usePlayerStats";
 
-export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: () => void }) {
+export function BattleScreen({ onNavigateToProfile: _onNavigateToProfile }: { onNavigateToProfile?: () => void }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [countdown, setCountdown] = useState<number | null>(null);
-  const { stats } = usePlayerStats();
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
 
   // Wrap onMatchFound in useCallback to prevent WebSocket reconnections
   const handleMatchFound = useCallback(
@@ -79,6 +80,22 @@ export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: ()
       console.error("Failed to cancel matchmaking:", err);
     }
   };
+
+  // Fetch user stats on mount
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          const statsResponse = await userStatsAPI.getUserStats(user.id);
+          setUserStats(statsResponse);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user stats:", error);
+      }
+    };
+    fetchUserStats();
+  }, []);
 
   // Cleanup on unmount - useMatchmaking hook handles WebSocket cleanup
   // No need to manually call stopSearching here
@@ -210,12 +227,12 @@ export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: ()
             <section className="matchmaking-hero">
               {/* Left Column - Stats Cards */}
               <div className="matchmaking-left">
-                <MatchmakingStats
-                  tier={stats && stats.total_games > 0 ? "Unranked" : "Unranked"}
-                  mmr={0}
-                  winRate={stats ? Math.round(stats.win_rate * 100) : 0}
-                  avgReps={stats ? Math.round(stats.total_reps / Math.max(stats.total_workouts, 1)) : 0}
-                  totalGames={stats?.total_games ?? 0}
+                <MatchmakingStats 
+                  tier={userStats?.tier || "Unranked"} 
+                  mmr={userStats?.mmr ?? 1000} 
+                  winRate={userStats?.winRate ?? 0} 
+                  avgReps={userStats?.avgReps ?? 0} 
+                  totalGames={userStats?.totalBattles ?? 0}
                 />
               </div>
 

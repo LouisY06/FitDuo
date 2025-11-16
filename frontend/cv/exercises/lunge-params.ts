@@ -242,9 +242,7 @@ export function checkFrontShinAlignment(
     ? landmarks[LUNGE_LANDMARKS.LEFT_KNEE]
     : landmarks[LUNGE_LANDMARKS.RIGHT_KNEE];
   
-  const frontAnkle = frontLeg === 'left'
-    ? landmarks[LUNGE_LANDMARKS.LEFT_ANKLE]
-    : landmarks[LUNGE_LANDMARKS.RIGHT_ANKLE];
+  // const frontAnkle = frontLeg === 'left' ? landmarks[LUNGE_LANDMARKS.LEFT_ANKLE] : landmarks[LUNGE_LANDMARKS.RIGHT_ANKLE];
   
   const frontToe = frontLeg === 'left'
     ? landmarks[LUNGE_LANDMARKS.LEFT_TOE]
@@ -253,7 +251,7 @@ export function checkFrontShinAlignment(
   // Front shin should be mostly vertical
   // Check if knee travels excessively past toe
   const kneeToeDiff = Math.abs(frontKnee.x - frontToe.x);
-  const ankleToeDiff = Math.abs(frontAnkle.x - frontToe.x);
+  // const ankleToeDiff = Math.abs(frontAnkle.x - frontToe.x); // Unused for now
   
   // Knee should not be too far forward of toe
   const threshold = 0.1; // 10% of screen width
@@ -274,19 +272,17 @@ export function checkFrontShinAlignment(
  * @param landmarks - Array of pose landmarks
  * @returns Object with posture status
  */
-export function checkTorsoPosture(landmarks: PoseLandmark[]): {
+export function checkTorsoPosture(_landmarks: PoseLandmark[]): {
   isValid: boolean;
   error?: string;
 } {
   // Calculate shoulder-hip alignment
-  const shoulderMidY = (landmarks[LUNGE_LANDMARKS.LEFT_SHOULDER].y + 
-                        landmarks[LUNGE_LANDMARKS.RIGHT_SHOULDER].y) / 2;
-  const hipMidY = (landmarks[LUNGE_LANDMARKS.LEFT_HIP].y + 
-                   landmarks[LUNGE_LANDMARKS.RIGHT_HIP].y) / 2;
+  // const shoulderMidY = (landmarks[LUNGE_LANDMARKS.LEFT_SHOULDER].y + landmarks[LUNGE_LANDMARKS.RIGHT_SHOULDER].y) / 2;
+  // const hipMidY = (landmarks[LUNGE_LANDMARKS.LEFT_HIP].y + landmarks[LUNGE_LANDMARKS.RIGHT_HIP].y) / 2;
   
   // Torso should remain upright (shoulders above hips)
   // Check if torso is leaning too far forward
-  const torsoAngle = Math.abs(shoulderMidY - hipMidY);
+  // const torsoAngle = Math.abs(shoulderMidY - hipMidY); // Unused for now
   
   // Simplified check - torso should maintain relatively upright position
   const isValid = true; // Can be enhanced with actual angle calculation
