@@ -1150,6 +1150,10 @@ export function ActiveBattleScreen() {
 
   // Exercise Selection Screen (only show if it's this player's turn)
   if (showExerciseSelection && !selectedExercise && whoseTurnToChoose === playerId) {
+    // Show the NEXT round number during selection (we're selecting FOR the next round)
+    // If we've completed any rounds (not first selection), show currentRound + 1
+    const hasCompletedRounds = userRoundsWon + opponentRoundsWon > 0 || roundEndData !== null;
+    const displayRound = hasCompletedRounds ? currentRound + 1 : currentRound;
     return (
       <>
         <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />
@@ -1157,7 +1161,7 @@ export function ActiveBattleScreen() {
           <div className="w-full max-w-4xl">
             <div className="text-center mb-8">
               <h1 className="text-4xl font-semibold text-lime-400 audiowide-regular mb-2">
-                Round {currentRound}
+                Round {displayRound}
               </h1>
               <p className="text-lg text-slate-300">
                 Choose your exercise for this round
@@ -1200,6 +1204,10 @@ export function ActiveBattleScreen() {
 
   // Waiting for opponent to choose exercise (only show if exercise not yet selected)
   if (showExerciseSelection && !selectedExercise && whoseTurnToChoose !== playerId && whoseTurnToChoose !== null) {
+    // Show the NEXT round number during selection (we're waiting for the next round)
+    // If we've completed any rounds (not first selection), show currentRound + 1
+    const hasCompletedRounds = userRoundsWon + opponentRoundsWon > 0 || roundEndData !== null;
+    const displayRound = hasCompletedRounds ? currentRound + 1 : currentRound;
     return (
       <>
         <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />
@@ -1207,7 +1215,7 @@ export function ActiveBattleScreen() {
           <div className="w-full max-w-4xl text-center">
             <div className="mb-8">
               <h1 className="text-4xl font-semibold text-lime-400 audiowide-regular mb-4">
-                Round {currentRound}
+                Round {displayRound}
               </h1>
               <p className="text-lg text-slate-300 mb-8">
                 Waiting for opponent to choose exercise...
