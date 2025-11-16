@@ -534,11 +534,16 @@ export function ActiveBattleScreen() {
         4: "lunge",
       };
       const exercise = exerciseIdMap[state.exerciseId];
-      if (exercise && exercise !== selectedExercise) {
+      if (exercise) {
+        // Always update exercise and hide selection screen when exercise is set
+        // This is important for the waiting player in round 2+
+        if (exercise !== selectedExercise) {
+          console.log(`✅ Exercise selected via GAME_STATE: ${exercise} (ID: ${state.exerciseId})`);
+        }
         setSelectedExercise(exercise);
-        setShowExerciseSelection(false);
-        // Exercise was selected (either by us or opponent), hide waiting screen
-        console.log(`✅ Exercise selected: ${exercise} (ID: ${state.exerciseId})`);
+        setShowExerciseSelection(false); // Hide waiting/exercise selection screen immediately
+        // Set game phase to ready to ensure waiting screen condition fails
+        setGamePhase("ready");
       }
     }
     
@@ -570,7 +575,8 @@ export function ActiveBattleScreen() {
     console.log(`🎮 Current showExerciseSelection: ${showExerciseSelection}, selectedExercise: ${selectedExercise}`);
     
     setCurrentRound(round);
-    setShowExerciseSelection(false); // Hide exercise selection/waiting screen immediately
+    // CRITICAL: Hide exercise selection/waiting screen immediately for both players
+    setShowExerciseSelection(false);
     setShowRoundEnd(false);
     setRoundEndData(null);
     
@@ -579,7 +585,7 @@ export function ActiveBattleScreen() {
     setTimeRemaining(durationSeconds);
     
     // Map exercise ID to exercise type if provided
-    // This is important for the waiting player who receives ROUND_START before FORM_RULES
+    // This is important for the waiting player who receives ROUND_START
     if (exerciseId) {
       const exerciseIdMap: Record<number, ExerciseType> = {
         1: "push-up",
@@ -589,9 +595,9 @@ export function ActiveBattleScreen() {
       };
       const exercise = exerciseIdMap[exerciseId];
       if (exercise) {
-        console.log(`🎮 Setting exercise from ROUND_START: ${exercise} (round ${round})`);
+        console.log(`🎮 Setting exercise from ROUND_START: ${exercise} (round ${round}) - HIDING WAITING SCREEN`);
         setSelectedExercise(exercise);
-        // Also hide exercise selection screen here to ensure it's hidden
+        // Force hide exercise selection screen (redundant but ensures it's hidden)
         setShowExerciseSelection(false);
         // Set game phase to ready so waiting screen condition fails
         setGamePhase("ready");
@@ -600,6 +606,8 @@ export function ActiveBattleScreen() {
       }
     } else {
       console.warn(`⚠️ ROUND_START received without exerciseId for round ${round}`);
+      // Even without exerciseId, hide the waiting screen
+      setShowExerciseSelection(false);
     }
     
     // Reset reps for new round
@@ -727,13 +735,14 @@ export function ActiveBattleScreen() {
     if (exercise) {
       // Always update exercise when FORM_RULES is received (for rounds 2 and 3)
       // This ensures the waiting player gets the exercise selection
+      // CRITICAL: Hide waiting screen immediately when exercise is selected
+      console.log(`✅ Exercise selected via FORM_RULES: ${exercise} (ID: ${data.exercise_id}) - HIDING WAITING SCREEN`);
       setSelectedExercise(exercise);
-      setShowExerciseSelection(false); // Hide exercise selection/waiting screen
-      setGamePhase("ready"); // Start ready phase
+      setShowExerciseSelection(false); // Hide exercise selection/waiting screen immediately
+      setGamePhase("ready"); // Start ready phase and ensure waiting screen condition fails
       setReadyPhaseRemaining(10);
       setUserReady(false);
       setOpponentReady(false);
-      console.log(`✅ Exercise selected via FORM_RULES: ${exercise} (ID: ${data.exercise_id})`);
     } else {
       console.warn(`⚠️ Unknown exercise ID: ${data.exercise_id}`);
     }
