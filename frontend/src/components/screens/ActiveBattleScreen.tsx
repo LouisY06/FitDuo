@@ -309,48 +309,71 @@ export function ActiveBattleScreen() {
     setTimeRemaining(durationSeconds);
     setLastRepTime(Date.now()); // Reset inactivity timer when round starts
 
+    let intervalCleared = false;
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
-        if (prev <= 1) {
+        if (prev <= 1 && !intervalCleared) {
           // Time's up! Send round end to backend
           console.log("⏰ Time's up! Sending ROUND_END to backend...");
+          intervalCleared = true;
+          clearInterval(interval); // Clear immediately
+          
+          // Set game phase to ended
           setGamePhase("ended");
+          
+          // Send round end
           const sendRoundEnd = sendRoundEndRef.current;
           if (sendRoundEnd) {
             sendRoundEnd();
             console.log("📤 ROUND_END sent to backend");
+          } else {
+            console.error("❌ sendRoundEnd is not available!");
           }
-          // Backend will determine winner and broadcast ROUND_END event
-          // which will trigger handleRoundEnd callback
           return 0;
         }
-        return prev - 1;
+        return prev > 0 ? prev - 1 : 0;
       });
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (!intervalCleared) {
+        clearInterval(interval);
+      }
+    };
   }, [gamePhase, selectedExercise, playerId, gameState, durationSeconds]);
 
   // Inactivity timer - end round if no reps for 10 seconds
   useEffect(() => {
     if (gamePhase !== "live" || selectedExercise === "plank") return;
 
+    let inactivityTriggered = false;
     const checkInactivity = setInterval(() => {
+      if (inactivityTriggered) return;
+      
       const timeSinceLastRep = Date.now() - lastRepTime;
       const inactivityThreshold = 10000; // 10 seconds
 
       if (timeSinceLastRep >= inactivityThreshold) {
         console.log("💤 10 seconds of inactivity - ending round...");
+        inactivityTriggered = true;
+        clearInterval(checkInactivity); // Clear immediately
+        
         setGamePhase("ended");
         const sendRoundEnd = sendRoundEndRef.current;
         if (sendRoundEnd) {
           sendRoundEnd();
           console.log("📤 ROUND_END sent due to inactivity");
+        } else {
+          console.error("❌ sendRoundEnd is not available!");
         }
       }
     }, 1000); // Check every second
 
-    return () => clearInterval(checkInactivity);
+    return () => {
+      if (!inactivityTriggered) {
+        clearInterval(checkInactivity);
+      }
+    };
   }, [gamePhase, lastRepTime, selectedExercise]);
 
   const handlePlayerReady = useCallback((playerIdFromWS: number, isReady: boolean) => {
