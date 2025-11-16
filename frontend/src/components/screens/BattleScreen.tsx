@@ -13,26 +13,27 @@ export function BattleScreen() {
   const [countdown, setCountdown] = useState<number | null>(null);
 
   // Wrap onMatchFound in useCallback to prevent WebSocket reconnections
-  const handleMatchFound = useCallback((payload: MatchFoundPayload) => {
-    console.log("Match found!", payload);
-    // Start countdown
-    let cd = 3;
-    setCountdown(cd);
-    const interval = setInterval(() => {
-      cd--;
-      if (cd > 0) {
-        setCountdown(cd);
-      } else {
-        clearInterval(interval);
-        setCountdown(null);
-        // Show simple battle placeholder
-        console.log("🚀 Match found! Game ID:", payload.game_id);
-        console.log("🎮 Opponent:", payload.opponent_name);
-        alert(`Match found!\nGame ID: ${payload.game_id}\nVS: ${payload.opponent_name}\n\nBattle UI coming soon! 🎮`);
-        // Stay on matchmaking screen for now
-      }
-    }, 1000);
-  }, [navigate]);
+  const handleMatchFound = useCallback(
+    (payload: MatchFoundPayload) => {
+      console.log("Match found!", payload);
+      // Start countdown
+      let cd = 3;
+      setCountdown(cd);
+      const interval = setInterval(() => {
+        cd--;
+        if (cd > 0) {
+          setCountdown(cd);
+        } else {
+          clearInterval(interval);
+          setCountdown(null);
+          // Navigate to battle screen with gameId in the URL
+          console.log("🚀 Match found! Game ID:", payload.game_id);
+          navigate(`/app/battle/${payload.game_id}`);
+        }
+      }, 1000);
+    },
+    [navigate]
+  );
 
   const {
     isSearching,

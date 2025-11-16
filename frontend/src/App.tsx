@@ -15,6 +15,11 @@ const WorkoutDiscovery = lazy(() =>
 const AppShell = lazy(() => 
   import("./components/AppShell").then(module => ({ default: module.AppShell }))
 );
+const ActiveBattleScreen = lazy(() =>
+  import("./components/screens/ActiveBattleScreen").then((module) => ({
+    default: module.ActiveBattleScreen,
+  }))
+);
 const InfoPage = lazy(() => 
   import("./components/InfoPage").then(module => ({ default: module.InfoPage }))
 );
@@ -78,6 +83,18 @@ function App() {
                 <VantaBackground>
                   <Suspense fallback={<LoadingFallback />}>
                     <AppShell />
+                  </Suspense>
+                </VantaBackground>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/app/battle/:gameId"
+            element={
+              <ProtectedRoute>
+                <VantaBackground>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <ActiveBattleScreen />
                   </Suspense>
                 </VantaBackground>
               </ProtectedRoute>
