@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database.connection import init_db
-from app.routers import exercise, match, websocket, llm, auth, player, matchmaking
+from app.routers import exercise, match, websocket, llm, auth, player, matchmaking, user_stats
 import os
 import logging
 
@@ -40,6 +40,7 @@ app.include_router(llm.router)
 app.include_router(auth.router)
 app.include_router(player.router)
 app.include_router(matchmaking.router)
+app.include_router(user_stats.router)
 
 logger = logging.getLogger(__name__)
 

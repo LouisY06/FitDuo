@@ -1,10 +1,29 @@
 import { RadialOrbitalProfileDemo, defaultProfile } from "@/components/ui/radial-orbital-profile-demo";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
-import { logout } from "../../services/auth";
+import { logout, getCurrentUser } from "../../services/auth";
+import { userStatsAPI, UserStats } from "../../services/api";
+import { useState, useEffect } from "react";
 
 export function ProfileScreen() {
   const navigate = useNavigate();
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+
+  // Fetch user stats on mount
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          const stats = await userStatsAPI.getUserStats(user.id);
+          setUserStats(stats);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user stats:", error);
+      }
+    };
+    fetchUserStats();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -68,7 +87,7 @@ export function ProfileScreen() {
               </div>
             )}
             <div className="h-[480px] md:h-[600px] flex items-center justify-center pt-0 md:pt-2">
-              <RadialOrbitalProfileDemo />
+              <RadialOrbitalProfileDemo userStats={userStats} />
             </div>
           </section>
         </div>

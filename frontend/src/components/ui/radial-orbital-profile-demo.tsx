@@ -27,7 +27,7 @@ export const defaultProfile: ProfileShape = {
     "https://images.unsplash.com/photo-1517832207067-4db24a2ae47c?auto=format&fit=crop&w=600&q=80",
 };
 
-export const defaultTimelineData = [
+export const createTimelineData = (userStats: any | null) => [
   {
     id: 1,
     title: "Bio",
@@ -43,9 +43,10 @@ export const defaultTimelineData = [
   {
     id: 2,
     title: "Stats",
-    subtitle: "Last 30 days",
-    content:
-      "24 sessions • 6 matchmade partners • Avg 18 min per battle • Personal best: 132 squats in 3 minutes.",
+    subtitle: "All Time",
+    content: userStats 
+      ? `${userStats.totalBattles} battles • ${userStats.wins} wins (${userStats.winRate.toFixed(1)}% win rate) • ${userStats.totalWorkoutMinutes} total minutes • Best: ${userStats.bestRepsSingleRound} reps in one round`
+      : "Loading stats...",
     category: "Stats",
     icon: Dumbbell,
     relatedIds: [1, 4],
@@ -103,12 +104,13 @@ export const defaultTimelineData = [
 ];
 
 export function RadialOrbitalProfileDemo({
+  userStats,
   profile = defaultProfile,
-  timelineData = defaultTimelineData,
 }: {
+  userStats: any | null;
   profile?: ProfileShape;
-  timelineData?: typeof defaultTimelineData;
 }) {
+  const timelineData = createTimelineData(userStats);
   return (
     <RadialOrbitalProfileTimeline profile={profile} timelineData={timelineData} />
   );

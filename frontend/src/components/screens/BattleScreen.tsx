@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MatchmakingStats } from "../MatchmakingStats";
 import { ElectricButton } from "../ElectricButton";
@@ -6,11 +6,14 @@ import { MatchmakingProgressCard } from "../MatchmakingProgressCard";
 import VantaHaloBackground from "../VantaHaloBackground";
 import { useMatchmaking } from "../../hooks/useMatchmaking";
 import type { MatchFoundPayload } from "../../services/matchmaking";
+import { getCurrentUser } from "../../services/auth";
+import { userStatsAPI, UserStats } from "../../services/api";
 import "./BattleScreen.css";
 
 export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: () => void }) {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
 
   // Wrap onMatchFound in useCallback to prevent WebSocket reconnections
   const handleMatchFound = useCallback(
@@ -65,6 +68,22 @@ export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: ()
       console.error("Failed to cancel matchmaking:", err);
     }
   };
+
+  // Fetch user stats on mount
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          const stats = await userStatsAPI.getUserStats(user.id);
+          setUserStats(stats);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user stats:", error);
+      }
+    };
+    fetchUserStats();
+  }, []);
 
   // Cleanup on unmount - useMatchmaking hook handles WebSocket cleanup
   // No need to manually call stopSearching here
@@ -196,7 +215,12 @@ export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: ()
             <section className="matchmaking-hero">
               {/* Left Column - Stats Cards */}
               <div className="matchmaking-left">
-                <MatchmakingStats tier="Silver" mmr={1250} winRate={62} avgReps={38} />
+                <MatchmakingStats 
+                  tier={userStats?.tier || "Unranked"} 
+                  mmr={userStats?.mmr || 1000} 
+                  winRate={userStats?.winRate || 0} 
+                  avgReps={userStats?.avgReps || 0} 
+                />
               </div>
 
               {/* Right Column - Ready to battle CTA */}
