@@ -532,7 +532,6 @@ export function ActiveBattleScreen() {
       setOpponentRoundsWon(prev => prev + 1);
     }
     
-    // Check if someone won 2 rounds (game over)
     const newUserRoundsWon = data.winnerId === playerId ? userRoundsWon + 1 : userRoundsWon;
     const newOpponentRoundsWon = data.winnerId && data.winnerId !== playerId ? opponentRoundsWon + 1 : opponentRoundsWon;
     
@@ -544,11 +543,13 @@ export function ActiveBattleScreen() {
     setShowRoundEnd(true);
     setRoundEndCountdown(5); // Reset countdown
     
-    // Check if game is over (2 rounds won)
-    if (newUserRoundsWon >= 2 || newOpponentRoundsWon >= 2) {
-      console.log(`🎉 Game Over! ${newUserRoundsWon >= 2 ? 'You' : 'Opponent'} won ${newUserRoundsWon >= 2 ? newUserRoundsWon : newOpponentRoundsWon}-${newUserRoundsWon >= 2 ? newOpponentRoundsWon : newUserRoundsWon}`);
-      setShowGameOver(true);
-      // Don't show exercise selection or continue to next round
+    // Check if this was round 3 - game over after 3 rounds ALWAYS
+    if (currentRound >= 3) {
+      console.log(`🎉 Game Over after 3 rounds! Final score - You: ${newUserRoundsWon}, Opponent: ${newOpponentRoundsWon}`);
+      setTimeout(() => {
+        setShowGameOver(true);
+        setShowRoundEnd(false);
+      }, 5000);
       return;
     }
     
@@ -568,16 +569,14 @@ export function ActiveBattleScreen() {
     
     setWhoseTurnToChoose(nextChooser);
     
-    // After showing round end screen, show exercise selection for next round if game not finished
+    // After showing round end screen, show exercise selection for next round
     setTimeout(() => {
-      if (newUserRoundsWon < 2 && newOpponentRoundsWon < 2 && nextChooser) {
-        setShowRoundEnd(false);
-        setSelectedExercise(null);
-        // Backend will increment round number in next GAME_STATE update
-        // Show exercise selection screen for both players
-        // One will see the selection UI, the other will see the waiting screen
-        setShowExerciseSelection(true);
-      }
+      setShowRoundEnd(false);
+      setSelectedExercise(null);
+      // Backend will increment round number in next GAME_STATE update
+      // Show exercise selection screen for both players
+      // One will see the selection UI, the other will see the waiting screen
+      setShowExerciseSelection(true);
     }, 5000); // Show round end screen for 5 seconds
   }, [currentRound, whoseTurnToChoose, playerId, gameState, userRoundsWon, opponentRoundsWon]);
 
@@ -1060,7 +1059,7 @@ export function ActiveBattleScreen() {
 
               {/* Round Wins */}
               <div className="mb-6">
-                <p className="text-sm text-slate-400 mb-2">Match Score (First to 2 wins)</p>
+                <p className="text-sm text-slate-400 mb-2">Match Score (Best of 3 Rounds)</p>
                 <div className="inline-flex items-center gap-4 bg-slate-700/30 border border-slate-600 rounded-xl px-6 py-3">
                   <span className="text-lime-300 font-semibold">You: {userRoundsWon}</span>
                   <span className="text-slate-500">-</span>
