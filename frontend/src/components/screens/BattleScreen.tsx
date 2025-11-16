@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { MatchmakingStats } from "../MatchmakingStats";
 import { ElectricButton } from "../ElectricButton";
@@ -12,6 +12,27 @@ export function BattleScreen() {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState<number | null>(null);
 
+  // Wrap onMatchFound in useCallback to prevent WebSocket reconnections
+  const handleMatchFound = useCallback((payload: MatchFoundPayload) => {
+    console.log("Match found!", payload);
+    // Start countdown
+    let cd = 3;
+    setCountdown(cd);
+    const interval = setInterval(() => {
+      cd--;
+      if (cd > 0) {
+        setCountdown(cd);
+      } else {
+        clearInterval(interval);
+        setCountdown(null);
+        // Navigate to battle screen (game ID is stored for later use)
+        console.log("🚀 Match found! Game ID:", payload.game_id);
+        // TODO: Store game_id and navigate to actual battle view
+        navigate(`/app`);
+      }
+    }, 1000);
+  }, [navigate]);
+
   const {
     isSearching,
     queueStatus,
@@ -21,25 +42,7 @@ export function BattleScreen() {
     stopSearching,
   } = useMatchmaking({
     autoConnect: true,
-    onMatchFound: (payload: MatchFoundPayload) => {
-      console.log("Match found!", payload);
-      // Start countdown
-      let cd = 3;
-      setCountdown(cd);
-      const interval = setInterval(() => {
-        cd--;
-        if (cd > 0) {
-          setCountdown(cd);
-        } else {
-          clearInterval(interval);
-          setCountdown(null);
-          // Navigate to battle screen (game ID is stored for later use)
-          console.log("🚀 Match found! Game ID:", payload.game_id);
-          // TODO: Store game_id and navigate to actual battle view
-          navigate(`/app`);
-        }
-      }, 1000);
-    },
+    onMatchFound: handleMatchFound,
   });
 
   const handleFindRival = async () => {
