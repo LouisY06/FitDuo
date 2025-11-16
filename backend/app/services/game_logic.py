@@ -91,13 +91,11 @@ async def handle_round_end(
         loser_id = game_session.player_b_id
         winner_score = game_session.player_a_score
         loser_score = game_session.player_b_score
-        # Temporarily disabled until migration runs: game_session.player_a_rounds_won += 1
     elif game_session.player_b_score > game_session.player_a_score:
         winner_id = game_session.player_b_id
         loser_id = game_session.player_a_id
         winner_score = game_session.player_b_score
         loser_score = game_session.player_a_score
-        # Temporarily disabled until migration runs: game_session.player_b_rounds_won += 1
     else:
         # Tie - both players tied
         winner_id = None
@@ -105,22 +103,8 @@ async def handle_round_end(
         winner_score = game_session.player_a_score
         loser_score = game_session.player_b_score
 
-    # Check if game is over (best of 3: first to win 2 rounds)
-    # Temporarily disabled until migration runs
-    game_over = False
-    match_winner_id = None
-    # if game_session.player_a_rounds_won >= 2:
-    #     game_over = True
-    #     match_winner_id = game_session.player_a_id
-    # elif game_session.player_b_rounds_won >= 2:
-    #     game_over = True
-    #     match_winner_id = game_session.player_b_id
-
     # Update game status
-    if game_over:
-        game_session.status = GameStatus.FINISHED.value
-    else:
-        game_session.status = GameStatus.ROUND_END.value
+    game_session.status = GameStatus.ROUND_END.value
     game_session.updated_at = datetime.utcnow()
     
     session.add(game_session)
@@ -170,11 +154,7 @@ async def handle_round_end(
                 "loserId": loser_id,
                 "playerAScore": game_session.player_a_score,
                 "playerBScore": game_session.player_b_score,
-                "playerARoundsWon": getattr(game_session, 'player_a_rounds_won', 0),
-                "playerBRoundsWon": getattr(game_session, 'player_b_rounds_won', 0),
                 "currentRound": game_session.current_round,
-                "gameOver": game_over,
-                "matchWinnerId": match_winner_id,
                 "narrative": narrative,
                 "strategy": strategy,
             },
