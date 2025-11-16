@@ -21,10 +21,19 @@ def get_session() -> Generator[Session, None, None]:
 
 def init_db():
     """Initialize database - create all tables"""
-    # Import models here to avoid circular imports at module level
-    # This ensures SQLModel knows about all tables when create_all is called
-    from app.models import User, GameSession, Exercise
-    from app.models.user_stats import UserStats
-    
-    SQLModel.metadata.create_all(engine)
+    try:
+        # Import models here to avoid circular imports at module level
+        # This ensures SQLModel knows about all tables when create_all is called
+        from app.models import User, GameSession, Exercise
+        from app.models.user_stats import UserStats
+        
+        print("Creating database tables...")
+        SQLModel.metadata.create_all(engine)
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+        import traceback
+        traceback.print_exc()
+        # Don't crash the app, just log the error
+        # The app can still start and tables might already exist
 
