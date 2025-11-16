@@ -7,7 +7,7 @@ import VantaHaloBackground from "../VantaHaloBackground";
 import { useMatchmaking } from "../../hooks/useMatchmaking";
 import type { MatchFoundPayload } from "../../services/matchmaking";
 import { getCurrentUser } from "../../services/auth";
-import { userStatsAPI, UserStats } from "../../services/api";
+import { userStatsAPI, type UserStats } from "../../services/api";
 import "./BattleScreen.css";
 
 export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: () => void }) {

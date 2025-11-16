@@ -2,7 +2,7 @@ import { RadialOrbitalProfileDemo, defaultProfile } from "@/components/ui/radial
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { logout, getCurrentUser } from "../../services/auth";
-import { userStatsAPI, UserStats } from "../../services/api";
+import { userStatsAPI, type UserStats } from "../../services/api";
 import { useState, useEffect } from "react";
 
 export function ProfileScreen() {
