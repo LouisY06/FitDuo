@@ -74,6 +74,43 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Make the Workout, Battle, Timer and AI Coach icons larger for emphasis */
+.nav-item[data-page="workout"] .nav-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.nav-item[data-page="battle"] .nav-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.nav-item[data-page="time"] .nav-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.nav-item[data-page="coach"] .nav-icon svg {
+  width: 36px;
+  height: 36px;
+}
+
+/* Give the coach icon a larger container so it can actually grow */
+.nav-item[data-page="coach"] .nav-icon {
+  width: 36px;
+  height: 36px;
+  /* Nudge robot icon down slightly for better alignment */
+  transform: translateY(5px);
+}
+
+/* Give workout, battle and time icons a slightly larger container as well */
+.nav-item[data-page="workout"] .nav-icon,
+.nav-item[data-page="battle"] .nav-icon,
+.nav-item[data-page="time"] .nav-icon {
+  width: 32px;
+  height: 32px;
+}
+
 .nav-item.active .nav-icon svg {
   stroke: #63ff00;
 }
@@ -155,6 +192,29 @@
   .nav-icon svg {
     width: 20px;
     height: 20px;
+  }
+
+  /* First three icons slightly larger on mobile as well */
+  .nav-item[data-page="workout"] .nav-icon svg,
+  .nav-item[data-page="battle"] .nav-icon svg,
+  .nav-item[data-page="time"] .nav-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .nav-item[data-page="time"] .nav-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .nav-item[data-page="coach"] .nav-icon svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .nav-item[data-page="coach"] .nav-icon {
+    width: 32px;
+    height: 32px;
   }
 }
 

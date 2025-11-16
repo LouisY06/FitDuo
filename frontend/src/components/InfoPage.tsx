@@ -47,7 +47,17 @@ export function InfoPage({ onBack }: InfoPageProps) {
               there's someone across the world ready to battle.
             </p>
 
-            <h3 className="info-subtitle">What happens when you match</h3>
+            <h3 className="info-subtitle">
+              {"What happens when you match".split(" ").map((word, index) => (
+                <span
+                  key={`what-happens-${word}-${index}`}
+                  className="tagline-word"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  {word}&nbsp;
+                </span>
+              ))}
+            </h3>
             <ul className="info-list">
               <li>
                 <strong>Smart pairing:</strong> We match you with players at a similar
@@ -67,7 +77,17 @@ export function InfoPage({ onBack }: InfoPageProps) {
               </li>
             </ul>
 
-            <h3 className="info-subtitle">Why we built it this way</h3>
+            <h3 className="info-subtitle">
+              {"Why we built it this way".split(" ").map((word, index) => (
+                <span
+                  key={`why-built-${word}-${index}`}
+                  className="tagline-word"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  {word}&nbsp;
+                </span>
+              ))}
+            </h3>
             <p>
               People show up more when someone is counting on them. By connecting you
               with real rivals across the globe, we create accountability that solo

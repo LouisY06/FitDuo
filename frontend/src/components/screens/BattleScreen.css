@@ -24,6 +24,8 @@
 /* Header Section */
 .matchmaking-header {
   text-align: center;
+  /* Shift header (title + subtitle) down slightly */
+  margin-top: 50px;
   margin-bottom: 2.25rem;
 }
 
@@ -63,7 +65,8 @@
   justify-content: space-between;
   gap: 4rem;
   max-width: 1200px;
-  margin: 1rem auto 0;
+  /* Stats + CTA row position */
+  margin: 2rem auto 0;
   padding-inline: 1.5rem;
   position: relative;
   z-index: 2;
@@ -121,8 +124,8 @@
   justify-content: space-between;
   gap: 1.25rem;
   box-sizing: border-box;
-  /* Shift card 130px down and 100px to the right for final placement */
-  margin-top: 130px;
+  /* Shift card down and to the right for final placement */
+  margin-top: 85px; /* moved up by another 25px */
   margin-left: 100px;
 }
 

@@ -185,7 +185,7 @@ export function CoachScreen() {
       }}
     >
       <h1
-        className="audiowide-regular"
+        className="audiowide-regular ai-heading-clip"
         style={{
           fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
           fontWeight: 400,
@@ -194,7 +194,7 @@ export function CoachScreen() {
           color: "#63ff00",
         }}
       >
-        AI Coach
+        <span className="ai-heading-clip-text">AI Coach</span>
       </h1>
       <p style={{ opacity: 0.8, marginBottom: "2rem" }}>
         Get real-time feedback on form and pacing.
@@ -207,8 +207,13 @@ export function CoachScreen() {
           gap: "1.5rem",
         }}
       >
-        {exercises.map((exercise) => (
-          <ShimmerCard key={exercise.id} variant="success">
+        {exercises.map((exercise, index) => (
+          <ShimmerCard
+            key={exercise.id}
+            variant="success"
+            className="ai-stagger-card"
+            style={{ animationDelay: `${index * 0.1}s` }}
+          >
             <h3
               style={{
                 fontSize: "1.25rem",

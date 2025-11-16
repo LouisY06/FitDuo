@@ -110,6 +110,20 @@ export function BattleScreen() {
   // Note: The actual battle screen will be at /app/battle/:gameId
   // This component only handles matchmaking and countdown
 
+  const taglineWords = [
+    "Get",
+    "matched",
+    "with",
+    "a",
+    "live",
+    "rival.",
+    "Best",
+    "reps",
+    "wins.",
+  ];
+
+  const readyToBattleWords = ["Ready", "to", "battle?"];
+
   return (
     <>
       {isSearching && <VantaHaloBackground />}
@@ -120,7 +134,15 @@ export function BattleScreen() {
             <header className="matchmaking-header">
               <h1 className="matchmaking-title">Matchmaking Battles</h1>
               <p className="matchmaking-subtitle">
-                Get matched with a live rival. Best reps wins.
+                {taglineWords.map((word, index) => (
+                  <span
+                    key={`${word}-${index}`}
+                    className="tagline-word"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    {word}&nbsp;
+                  </span>
+                ))}
               </p>
             </header>
 
@@ -140,7 +162,15 @@ export function BattleScreen() {
             <header className="matchmaking-header">
               <h1 className="matchmaking-title">Matchmaking Battles</h1>
               <p className="matchmaking-subtitle">
-                Get matched with a live rival. Best reps wins.
+                {taglineWords.map((word, index) => (
+                  <span
+                    key={`${word}-${index}`}
+                    className="tagline-word"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    {word}&nbsp;
+                  </span>
+                ))}
               </p>
             </header>
 
@@ -173,7 +203,17 @@ export function BattleScreen() {
               <div className="matchmaking-right">
                 <div className="matchmaking-cta-card">
                   <div>
-                    <h2 className="matchmaking-cta-title">Ready to battle?</h2>
+                    <h2 className="matchmaking-cta-title">
+                      {readyToBattleWords.map((word, index) => (
+                        <span
+                          key={`ready-${word}-${index}`}
+                          className="tagline-word"
+                          style={{ animationDelay: `${index * 100}ms` }}
+                        >
+                          {word}&nbsp;
+                        </span>
+                      ))}
+                    </h2>
                     <p className="matchmaking-cta-subtitle">
                       Jump into a live 1-minute rep race against a matched rival.
                     </p>

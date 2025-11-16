@@ -142,7 +142,7 @@ export function TimeTrialsScreen() {
       }}
     >
       <h1
-        className="audiowide-regular"
+        className="audiowide-regular ai-heading-clip"
         style={{
           fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
           fontWeight: 400,
@@ -151,7 +151,7 @@ export function TimeTrialsScreen() {
           color: "#63ff00",
         }}
       >
-        Time Trials
+        <span className="ai-heading-clip-text">Time Trials</span>
       </h1>
       <p style={{ opacity: 0.8, marginBottom: "2rem" }}>
         Compete against the clock for speed-based challenges
@@ -164,8 +164,13 @@ export function TimeTrialsScreen() {
           gap: "1.5rem",
         }}
       >
-        {trialModes.map((mode) => (
-          <ShimmerCard key={mode.id} variant="success">
+        {trialModes.map((mode, index) => (
+          <ShimmerCard
+            key={mode.id}
+            variant="success"
+            className="ai-stagger-card"
+            style={{ animationDelay: `${index * 0.1}s` }}
+          >
             <h3
               style={{
                 fontSize: "1.25rem",

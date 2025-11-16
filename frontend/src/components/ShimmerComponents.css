@@ -194,6 +194,55 @@
 }
 
 /* ============================================
+   AI COACH / TESTIMONIAL ANIMATIONS
+   ============================================ */
+
+/* Staggered fade-up for cards; delay is applied inline per card */
+.ai-stagger-card {
+  opacity: 0;
+  transform: translateY(16px);
+  animation: ai-card-fade-up 600ms ease-out forwards;
+}
+
+@keyframes ai-card-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Heading text reveal with clipping mask */
+.ai-heading-clip {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+}
+
+.ai-heading-clip-text {
+  display: inline-block;
+  transform: translateX(-8px);
+  clip-path: inset(0 100% 0 0);
+  animation: ai-heading-reveal 800ms ease-out forwards;
+}
+
+@keyframes ai-heading-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ============================================
    INPUT STYLES
    ============================================ */
 

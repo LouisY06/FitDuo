@@ -29,7 +29,17 @@ export function HierarchicalCard({
 
       {/* Subtitle - Medium Size */}
       {subtitle && (
-        <h3 className="hierarchical-card-subtitle">{subtitle}</h3>
+        <h3 className="hierarchical-card-subtitle">
+          {subtitle.split(" ").map((word, index) => (
+            <span
+              key={`subtitle-${word}-${index}`}
+              className="tagline-word"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              {word}&nbsp;
+            </span>
+          ))}
+        </h3>
       )}
 
       {/* Body Text - Smallest */}

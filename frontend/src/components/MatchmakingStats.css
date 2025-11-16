@@ -1,76 +1,117 @@
-/* MatchmakingStats.css - Stacked Cards Layout */
+/* MatchmakingStats.css - 2D dynamic stats card */
 
-.matchmaking-stats-container {
-  position: relative;
+.matchmaking-stats {
   width: 100%;
-  max-width: 100%;
-  margin: 0;
+  max-width: 420px;
   padding: 1rem 0;
-  height: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: flex-start;
+  gap: 0.75rem;
   box-sizing: border-box;
 }
 
-.stats-title {
-  /* Visually drop the title while keeping the cards in place */
-  margin: 50px 0 1.25rem 0;
-  font-size: 1.25rem;
+.matchmaking-stats-electric-frame {
+  position: relative;
+  width: 100%;
+  padding: 2px;
+  border-radius: 1.25rem;
+}
+
+.matchmaking-stats-heading {
+  font-size: 1.1rem;
   font-weight: 600;
   color: #63ff00;
   font-family: "Audiowide", sans-serif;
-  text-align: left;
-  text-shadow: 0 0 10px rgba(99, 255, 0, 0.5);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
 }
 
-.stats-cards-wrapper {
+.matchmaking-stats-card {
   width: 100%;
-  max-width: 420px;
-  height: auto;
-  min-height: 0;
+  border-radius: 1.25rem;
+  padding: 1.25rem 1.75rem;
+  background:
+    radial-gradient(circle at top left, rgba(15, 23, 42, 0.9), transparent 55%),
+    rgba(2, 6, 23, 0.6);
+  border: 1px solid rgba(148, 255, 128, 0.28);
+  box-shadow:
+    0 0 24px rgba(15, 23, 42, 0.9),
+    0 0 40px rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(22px);
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  position: relative;
-  overflow: visible;
-  padding: 0.5rem 0;
-  /* Counter the title margin so cards stay anchored */
-  margin-top: -50px;
-  box-sizing: border-box;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
-/* Responsive Design */
+.matchmaking-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.9rem;
+  background: radial-gradient(circle at left, rgba(15, 23, 42, 0.85), rgba(2, 6, 23, 0.9));
+  opacity: 0;
+  transform: translateY(10px);
+  animation: matchmaking-stat-row-in 400ms ease-out forwards;
+  transition: background 140ms ease-out, box-shadow 140ms ease-out, transform 140ms ease-out;
+}
+
+.matchmaking-stat-row:hover {
+  background: radial-gradient(circle at left, rgba(99, 255, 0, 0.16), #020617);
+  box-shadow: 0 0 10px rgba(99, 255, 0, 0.4);
+  transform: translateY(-1px);
+  }
+
+.matchmaking-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(148, 163, 184, 0.95);
+  }
+
+.matchmaking-stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(99, 255, 0, 0.12);
+  color: #63ff00;
+}
+
+.matchmaking-stat-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #e5fdf1;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+}
+
+@keyframes matchmaking-stat-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 768px) {
-  .matchmaking-stats-container {
-    padding: 0.75rem;
+  .matchmaking-stats {
+    max-width: 100%;
   }
 
-  .stats-title {
-    font-size: 1.125rem;
-    margin-bottom: 1rem;
-  }
-
-  .stats-cards-wrapper {
-    max-width: 320px;
-    min-height: 250px;
+  .matchmaking-stats-card {
+    padding: 0.9rem 1rem;
   }
 }
 
-@media (max-width: 480px) {
-  .matchmaking-stats-container {
-    padding: 0.5rem;
-  }
-
-  .stats-title {
-    font-size: 1rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .stats-cards-wrapper {
-    max-width: 280px;
-    min-height: 220px;
-  }
-}
 

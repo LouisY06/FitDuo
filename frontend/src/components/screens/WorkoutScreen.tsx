@@ -83,7 +83,7 @@ export function WorkoutScreen() {
       }}
     >
       <h1
-        className="audiowide-regular"
+        className="audiowide-regular ai-heading-clip"
         style={{
           fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
           fontWeight: 400,
@@ -92,7 +92,7 @@ export function WorkoutScreen() {
           color: "#63ff00",
         }}
       >
-        Quick Workout
+        <span className="ai-heading-clip-text">Quick Workout</span>
       </h1>
       <p style={{ opacity: 0.8, marginBottom: "2rem" }}>
         Choose a workout to get started
@@ -105,8 +105,13 @@ export function WorkoutScreen() {
           gap: "1.5rem",
         }}
       >
-        {workouts.map((workout) => (
-          <ShimmerCard key={workout.id} variant="success">
+        {workouts.map((workout, index) => (
+          <ShimmerCard
+            key={workout.id}
+            variant="success"
+            className="ai-stagger-card"
+            style={{ animationDelay: `${index * 0.1}s` }}
+          >
             <h3
               style={{
                 fontSize: "1.25rem",

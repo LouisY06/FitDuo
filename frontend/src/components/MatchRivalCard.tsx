@@ -36,18 +36,25 @@ export function MatchRivalCard({
           <div className="match-rival-name-wrapper">
             <h3 className="match-rival-name">{rivalName}</h3>
             <svg
-              className="match-rival-arrow"
-              width="20"
-              height="20"
+              className="match-rival-handshake"
+              width="22"
+              height="22"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="1.6"
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
+              {/* Globe icon: circle with latitude/longitude lines */}
+              <circle cx="12" cy="12" r="7" />
+              {/* Meridians */}
+              <path d="M12 5a9.5 9.5 0 0 1 3 7 9.5 9.5 0 0 1-3 7" />
+              <path d="M12 5a9.5 9.5 0 0 0-3 7 9.5 9.5 0 0 0 3 7" />
+              {/* Parallels */}
+              <path d="M5 12h14" />
+              <path d="M6.5 8.5h11" />
+              <path d="M6.5 15.5h11" />
             </svg>
           </div>
           <span className="match-rival-tier">{tier}</span>

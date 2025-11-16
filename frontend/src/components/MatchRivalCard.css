@@ -157,8 +157,8 @@
   font-size: 1.75rem;
 }
 
-/* Arrow Icon - Hidden by default, slides in on hover */
-.match-rival-arrow {
+/* Handshake Icon - Hidden by default, slides in on hover */
+.match-rival-handshake {
   color: #63ff00;
   opacity: 0;
   transform: translateX(-10px);
@@ -171,7 +171,7 @@
   transform: translateX(-8px);
 }
 
-.match-rival-card:hover .match-rival-arrow {
+.match-rival-card:hover .match-rival-handshake {
   opacity: 1;
   transform: translateX(0);
 }
