@@ -39,12 +39,19 @@ class ConnectionManager:
     async def broadcast_to_game(self, message: dict, game_id: int, exclude_player: int = None):
         """Broadcast a message to all players in a game"""
         if game_id in self.active_connections:
+            connected_players = list(self.active_connections[game_id].keys())
+            print(f"📡 Broadcasting {message.get('type')} to game {game_id}: connected_players={connected_players}, exclude_player={exclude_player}")
             for pid, websocket in self.active_connections[game_id].items():
                 if pid != exclude_player:
                     try:
                         await websocket.send_json(message)
+                        print(f"✅ Sent {message.get('type')} to player {pid} in game {game_id}")
                     except Exception as e:
-                        print(f"Error broadcasting to player {pid} in game {game_id}: {e}")
+                        print(f"❌ Error broadcasting to player {pid} in game {game_id}: {e}")
+                else:
+                    print(f"⏭️ Skipping player {pid} (excluded)")
+        else:
+            print(f"⚠️ Game {game_id} not found in active_connections")
 
     def get_connected_players(self, game_id: int) -> list[int]:
         """Get list of connected player IDs for a game"""

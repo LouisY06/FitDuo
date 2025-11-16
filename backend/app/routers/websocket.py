@@ -38,25 +38,20 @@ async def websocket_endpoint(websocket: WebSocket, game_id: int):
             await websocket.close(code=1008, reason="player_id must be an integer")
             return
 
-        # Verify game exists
-        session = next(get_session())
-        game_session = session.get(GameSession, game_id)
-        if not game_session:
-            await websocket.close(code=1008, reason="Game not found")
-            return
+        # Verify game exists and get initial game state
+        with next(get_session()) as session:
+            game_session = session.get(GameSession, game_id)
+            if not game_session:
+                await websocket.close(code=1008, reason="Game not found")
+                return
 
-        # Verify player is part of this game
-        if player_id not in [game_session.player_a_id, game_session.player_b_id]:
-            await websocket.close(code=1008, reason="Player not part of this game")
-            return
+            # Verify player is part of this game
+            if player_id not in [game_session.player_a_id, game_session.player_b_id]:
+                await websocket.close(code=1008, reason="Player not part of this game")
+                return
 
-        # Connect
-        await manager.connect(websocket, game_id, player_id)
-
-        # Send initial game state
-        await websocket.send_json({
-            "type": "GAME_STATE",
-            "payload": {
+            # Store game info for later use
+            initial_game_state = {
                 "gameId": game_id,
                 "playerA": {
                     "id": game_session.player_a_id,
@@ -68,7 +63,15 @@ async def websocket_endpoint(websocket: WebSocket, game_id: int):
                 },
                 "currentRound": game_session.current_round,
                 "status": game_session.status,
-            },
+            }
+
+        # Connect (after session is closed)
+        await manager.connect(websocket, game_id, player_id)
+
+        # Send initial game state
+        await websocket.send_json({
+            "type": "GAME_STATE",
+            "payload": initial_game_state,
         })
 
         # Listen for messages
@@ -76,7 +79,9 @@ async def websocket_endpoint(websocket: WebSocket, game_id: int):
             data = await websocket.receive_text()
             try:
                 message = json.loads(data)
-                await handle_websocket_message(message, game_id, player_id, session)
+                # Create a new session for each message to avoid connection pool exhaustion
+                with next(get_session()) as session:
+                    await handle_websocket_message(message, game_id, player_id, session)
             except json.JSONDecodeError:
                 await websocket.send_json({"type": "ERROR", "payload": "Invalid JSON"})
             except Exception as e:
@@ -97,6 +102,8 @@ async def handle_websocket_message(message: dict, game_id: int, player_id: int, 
     """Handle incoming WebSocket messages"""
     message_type = message.get("type")
     payload = message.get("payload", {})
+    print(f"📥 Received WebSocket message: type={message_type!r}, type(repr)={repr(message_type)}, game_id={game_id}, player_id={player_id}, payload={payload}")
+    print(f"🔍 Message type check: type={type(message_type)}, value={message_type}, == 'PLAYER_READY': {message_type == 'PLAYER_READY'}")
 
     if message_type == "PING":
         # Respond to ping with pong
@@ -168,10 +175,14 @@ async def handle_websocket_message(message: dict, game_id: int, player_id: int, 
     elif message_type == "PLAYER_READY":
         # Handle player ready status
         is_ready = payload.get("isReady", False)
+        print(f"📨 PLAYER_READY received: game_id={game_id}, player_id={player_id}, isReady={is_ready}")
+        
         # Track ready status and check if both players are ready
         both_ready = await manager.set_player_ready(game_id, player_id, is_ready)
+        print(f"📊 Ready status check: both_ready={both_ready}, game_id={game_id}")
         
         # Broadcast player ready status to opponent
+        print(f"📤 Broadcasting PLAYER_READY to game {game_id}, excluding player {player_id}")
         await manager.broadcast_to_game(
             {
                 "type": "PLAYER_READY",
@@ -183,11 +194,14 @@ async def handle_websocket_message(message: dict, game_id: int, player_id: int, 
             game_id,
             exclude_player=player_id,
         )
+        print(f"✅ PLAYER_READY broadcast complete for game {game_id}")
         
         # If both players are ready, start countdown
         if both_ready:
+            print(f"🎉 Both players ready! Starting countdown for game {game_id}")
             from datetime import datetime
             countdown_start_time = datetime.utcnow().timestamp()
+            print(f"📤 Broadcasting COUNTDOWN_START to game {game_id} (startTimestamp={countdown_start_time})")
             await manager.broadcast_to_game(
                 {
                     "type": "COUNTDOWN_START",
@@ -198,8 +212,12 @@ async def handle_websocket_message(message: dict, game_id: int, player_id: int, 
                 },
                 game_id,
             )
+            print(f"✅ COUNTDOWN_START broadcast complete for game {game_id}")
+        else:
+            print(f"⏳ Not all players ready yet. Waiting for other player...")
     else:
         # Echo back unknown message types for testing
+        print(f"⚠️ Unknown message type '{message_type}' - sending ECHO back. Full message: {message}")
         await manager.send_personal_message(
             {
                 "type": "ECHO",
