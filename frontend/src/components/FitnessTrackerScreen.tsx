@@ -232,8 +232,7 @@ export function FitnessTrackerScreen() {
         </div>
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <BottomNavBar />
+      {/* Bottom Navigation Bar removed - using AppShell navigation */}
     </div>
   );
 }

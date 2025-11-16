@@ -90,7 +90,7 @@ export function ActiveBattleScreen() {
   const [countdownStartTime, setCountdownStartTime] = useState<number | null>(null); // Server timestamp for sync
   const [userReady, setUserReady] = useState(false);
   const [opponentReady, setOpponentReady] = useState(false);
-  const [_isInStartingPosition, _setIsInStartingPosition] = useState(false);
+  const [isInStartingPosition, _setIsInStartingPosition] = useState(false);
   const [gamePhase, setGamePhase] = useState<"ready" | "countdown" | "live" | "ended">("ready");
   const [roundEndData, setRoundEndData] = useState<{
     winnerId: number | null;
@@ -118,7 +118,7 @@ export function ActiveBattleScreen() {
   
   // Game state derived values
   const _gameStateStr = gameState?.status || "countdown";
-  const _durationSeconds = 60;
+  const durationSeconds = 60;
   
   // Get selected exercise form rules
   const getSelectedExerciseRules = (): any => {
@@ -230,12 +230,12 @@ export function ActiveBattleScreen() {
   }, [selectedExercise, gamePhase, readyPhaseStartTime]);
 
   // Handle ready phase start from server (for timer synchronization)
-  const handleReadyPhaseStart = useCallback((startTimestamp: number, _durationSeconds: number) => {
+  const handleReadyPhaseStart = useCallback((startTimestamp: number, _unusedDuration: number) => {
     console.log(`⏱️ Ready phase started at server time: ${startTimestamp}`);
     // Convert server timestamp (seconds) to client timestamp (milliseconds)
     // Account for potential clock skew by using relative time
-    const _serverTimeMs = startTimestamp * 1000;
-    const _clientTimeMs = Date.now();
+    const _unusedServerTimeMs = startTimestamp * 1000;
+    const _unusedClientTimeMs = Date.now();
     // Store the server timestamp as-is, timer will calculate relative to current time
     setReadyPhaseStartTime(startTimestamp);
     setGamePhase("ready");
