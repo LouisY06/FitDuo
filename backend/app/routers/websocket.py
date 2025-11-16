@@ -139,45 +139,54 @@ async def handle_websocket_message(message: dict, game_id: int, player_id: int, 
             manager=manager,
         )
     elif message_type == "EXERCISE_SELECTED":
-        # Handle exercise selection and send form rules
+        # Handle exercise selection and start next round
         exercise_id = payload.get("exerciseId")
         if exercise_id:
             exercise = session.get(Exercise, exercise_id)
             if exercise:
-                # Update game session with exercise and reset scores for new round
                 game_session = session.get(GameSession, game_id)
                 if game_session:
-                    game_session.current_exercise_id = exercise_id
-                    game_session.player_a_score = 0
-                    game_session.player_b_score = 0
-                    game_session.status = "active"
-                    from datetime import datetime
-                    game_session.updated_at = datetime.utcnow()
-                    session.add(game_session)
-                    session.commit()
-                    session.refresh(game_session)
-                    
-                    # Broadcast updated game state with reset scores
-                    await manager.broadcast_to_game(
-                        {
-                            "type": "GAME_STATE",
-                            "payload": {
-                                "gameId": game_id,
-                                "playerA": {
-                                    "id": game_session.player_a_id,
-                                    "score": game_session.player_a_score,
+                    # If game is in ROUND_END status, start next round (increments round number)
+                    if game_session.status == "round_end":
+                        await start_next_round(
+                            game_id=game_id,
+                            exercise_id=exercise_id,
+                            session=session,
+                            manager=manager,
+                        )
+                    else:
+                        # First round - just update exercise and reset scores
+                        game_session.current_exercise_id = exercise_id
+                        game_session.player_a_score = 0
+                        game_session.player_b_score = 0
+                        game_session.status = "active"
+                        from datetime import datetime
+                        game_session.updated_at = datetime.utcnow()
+                        session.add(game_session)
+                        session.commit()
+                        session.refresh(game_session)
+                        
+                        # Broadcast updated game state with reset scores
+                        await manager.broadcast_to_game(
+                            {
+                                "type": "GAME_STATE",
+                                "payload": {
+                                    "gameId": game_id,
+                                    "playerA": {
+                                        "id": game_session.player_a_id,
+                                        "score": game_session.player_a_score,
+                                    },
+                                    "playerB": {
+                                        "id": game_session.player_b_id,
+                                        "score": game_session.player_b_score,
+                                    },
+                                    "currentRound": game_session.current_round,
+                                    "status": game_session.status,
+                                    "exerciseId": game_session.current_exercise_id,
                                 },
-                                "playerB": {
-                                    "id": game_session.player_b_id,
-                                    "score": game_session.player_b_score,
-                                },
-                                "currentRound": game_session.current_round,
-                                "status": game_session.status,
-                                "exerciseId": game_session.current_exercise_id,
                             },
-                        },
-                        game_id,
-                    )
+                            game_id,
+                        )
                 
                 form_rules = await llm_service.generate_form_rules(exercise.name)
                 # Send form rules to all players in the game
