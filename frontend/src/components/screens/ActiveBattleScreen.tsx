@@ -109,6 +109,7 @@ export function ActiveBattleScreen() {
     matchWinnerId?: number | null;
     narrative: string;
     strategy: Record<string, unknown>;
+    currentRound?: number; // The round that just ended
   } | null>(null);
   const [roundEndCountdown, setRoundEndCountdown] = useState(5); // 5 second countdown after round ends
   const [showGameOver, setShowGameOver] = useState(false);
@@ -526,7 +527,18 @@ export function ActiveBattleScreen() {
   const handleGameState = useCallback((state: GameState) => {
     console.log("📊 Game state update:", state);
     setGameState(state);
-    setCurrentRound(state.currentRound || 1);
+    // CRITICAL: Only update currentRound if the new round is >= current round
+    // This prevents resetting rounds backwards when old GAME_STATE messages arrive
+    setCurrentRound((prevRound) => {
+      const newRound = state.currentRound || 1;
+      if (newRound >= prevRound) {
+        console.log(`✅ Updating round from ${prevRound} to ${newRound}`);
+        return newRound;
+      } else {
+        console.warn(`⚠️ Ignoring round reset from ${prevRound} to ${newRound} (not allowing backwards progression)`);
+        return prevRound;
+      }
+    });
     
     // Try to infer player ID from game state if we don't have it yet
     if (!playerId && auth?.currentUser) {
@@ -693,6 +705,7 @@ export function ActiveBattleScreen() {
     
     setRoundEndData({
       ...data,
+      currentRound: roundThatJustEnded, // Store the round that just ended
       playerARoundsWon: gameState?.playerA.id === playerId ? newUserRoundsWon : newOpponentRoundsWon,
       playerBRoundsWon: gameState?.playerA.id === playerId ? newOpponentRoundsWon : newUserRoundsWon,
     });
@@ -2141,7 +2154,7 @@ export function ActiveBattleScreen() {
           <div className="w-full max-w-4xl">
             <div className="text-center mb-8">
               <h1 className="text-5xl font-semibold text-lime-400 audiowide-regular mb-4">
-                Round {currentRound} Complete
+                Round {effectiveRoundEndData.currentRound || currentRound} Complete
               </h1>
               
               {/* Winner/Loser/Tie Display with shimmer card */}
@@ -2323,11 +2336,10 @@ export function ActiveBattleScreen() {
   // Also check that we haven't received ROUND_START yet
   // Show if we're not in active game phases (countdown/live) - allow "ready" and "ended" phases
   if (showExerciseSelection && !selectedExercise && whoseTurnToChoose === playerId && gamePhase !== "countdown" && gamePhase !== "live") {
-    // If we have roundEndData (meaning a round just ended), we're selecting for the NEXT round
-    // so display currentRound + 1. Otherwise (first round), display currentRound
-    const hasCompletedAnyRound = roundEndData !== null;
-    const displayRound = hasCompletedAnyRound ? currentRound + 1 : currentRound;
-    console.log("✅ Rendering exercise selection screen (your turn to choose)");
+    // currentRound is already set to the round we're about to start (updated in handleRoundEnd)
+    // So just display currentRound directly
+    const displayRound = currentRound;
+    console.log(`✅ Rendering exercise selection screen (your turn to choose) for Round ${displayRound}`);
     return (
       <>
         <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />
@@ -2444,10 +2456,9 @@ export function ActiveBattleScreen() {
   // Also check that we haven't received ROUND_START yet (which would set selectedExercise)
   // Show if we're not in active game phases (countdown/live) - allow "ready" and "ended" phases
   if (showExerciseSelection && !selectedExercise && whoseTurnToChoose !== playerId && whoseTurnToChoose !== null && gamePhase !== "countdown" && gamePhase !== "live") {
-    // If we have roundEndData (meaning a round just ended), we're waiting for the NEXT round
-    // so display currentRound + 1. Otherwise (first round), display currentRound
-    const hasCompletedAnyRound = roundEndData !== null;
-    const displayRound = hasCompletedAnyRound ? currentRound + 1 : currentRound;
+    // currentRound is already set to the round we're about to start (updated in handleRoundEnd)
+    // So just display currentRound directly
+    const displayRound = currentRound;
     return (
       <>
         <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />
@@ -2458,7 +2469,7 @@ export function ActiveBattleScreen() {
                 Round {displayRound}
               </h1>
               <p className="text-lg text-slate-300 mb-8">
-                Waiting for opponent to choose exercise...
+                Waiting for opponent to choose exercise for Round {displayRound}...
               </p>
               
               {/* Loading animation */}
