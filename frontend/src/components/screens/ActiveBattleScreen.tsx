@@ -424,7 +424,8 @@ export function ActiveBattleScreen() {
     }
     
     // Update opponent info from game state
-    if (playerId) {
+    // Only update reps from game state if NOT in live phase (to avoid overwriting live rep counts)
+    if (playerId && state.status !== "active" && state.status !== "live") {
       const isPlayerA = state.playerA.id === playerId;
       const opponent = isPlayerA ? state.playerB : state.playerA;
       setOpponentReps(opponent.score);
