@@ -67,6 +67,12 @@ export function useMatchmaking(
     fetchUser();
   }, []);
 
+  // Store onMatchFound in a ref to avoid reconnections
+  const onMatchFoundRef = useRef(onMatchFound);
+  useEffect(() => {
+    onMatchFoundRef.current = onMatchFound;
+  }, [onMatchFound]);
+
   // Connect to matchmaking WebSocket when searching
   useEffect(() => {
     if (isSearching && playerIdRef.current && autoConnect) {
@@ -74,16 +80,15 @@ export function useMatchmaking(
       const ws = new MatchmakingWebSocket(playerIdRef.current);
       wsRef.current = ws;
 
-      if (onMatchFound) {
-        console.log("✅ Registering onMatchFound callback");
-        ws.onMatchFound(onMatchFound);
-      } else {
-        console.warn("⚠️ No onMatchFound provided, using default handler");
-        // Default handler: log match found
-        ws.onMatchFound((payload) => {
-          console.log("Match found!", payload);
-        });
-      }
+      // Use the ref to avoid reconnections when callback changes
+      ws.onMatchFound((payload) => {
+        if (onMatchFoundRef.current) {
+          console.log("✅ Calling onMatchFound from ref");
+          onMatchFoundRef.current(payload);
+        } else {
+          console.log("Match found (no handler):", payload);
+        }
+      });
 
       ws.connect()
         .then(() => {
@@ -100,7 +105,7 @@ export function useMatchmaking(
         wsRef.current = null;
       };
     }
-  }, [isSearching, autoConnect, onMatchFound]);
+  }, [isSearching, autoConnect]);
 
   // Start searching for a match
   const startSearching = useCallback(async (exerciseId?: number) => {
