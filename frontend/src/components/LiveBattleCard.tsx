@@ -12,7 +12,9 @@ interface LiveBattleProps {
   countdownRemaining: number; // seconds until start (only for "countdown")
   timeRemaining: number; // seconds until end (for "live")
   userMetric: number; // reps OR hold seconds
-  // optionally, you can add opponentMetric here too for side-by-side view
+  // Optional opponent context for versus UI
+  opponentMetric?: number; // reps OR hold seconds
+  opponentName?: string;
 }
 
 const formatTime = (seconds: number) => {
@@ -30,6 +32,8 @@ export const LiveBattleCard: React.FC<LiveBattleProps> = ({
   countdownRemaining,
   timeRemaining,
   userMetric,
+  opponentMetric,
+  opponentName,
 }) => {
   // For countdown, we animate from duration → 0
   const totalCountdown = Math.max(durationSeconds, countdownRemaining);
@@ -67,6 +71,43 @@ export const LiveBattleCard: React.FC<LiveBattleProps> = ({
       : state === "ended_time"
       ? "Time is up. Waiting for final scores…"
       : "No movement for 10 seconds. Match ended.";
+
+  // Opponent / versus strip
+  const hasOpponent = typeof opponentMetric === "number";
+
+  const formattedUserMetric =
+    mode === "reps" ? userMetric.toString() : formatTime(userMetric);
+  const formattedOpponentMetric =
+    mode === "reps"
+      ? (opponentMetric ?? 0).toString()
+      : formatTime(opponentMetric ?? 0);
+
+  let versusSummary: string | null = null;
+  if (hasOpponent) {
+    if (userMetric > (opponentMetric ?? 0)) {
+      versusSummary =
+        state === "ended_time" || state === "ended_inactivity"
+          ? "You won this match."
+          : "You’re currently in the lead.";
+    } else if (userMetric < (opponentMetric ?? 0)) {
+      versusSummary =
+        state === "ended_time" || state === "ended_inactivity"
+          ? "You lost this match."
+          : "You’re currently behind.";
+    } else {
+      versusSummary =
+        state === "ended_time" || state === "ended_inactivity"
+          ? "This match ended in a tie."
+          : "Neck and neck right now.";
+    }
+  }
+
+  const totalForRatio =
+    hasOpponent && userMetric + (opponentMetric ?? 0) > 0
+      ? userMetric + (opponentMetric ?? 0)
+      : null;
+  const youPercent =
+    totalForRatio !== null ? (userMetric / totalForRatio) * 100 : 50;
 
   return (
     <div className="flex flex-col items-center gap-6 text-white">
@@ -144,6 +185,43 @@ export const LiveBattleCard: React.FC<LiveBattleProps> = ({
           </p>
         </div>
       </div>
+
+      {/* You vs Opponent strip */}
+      {hasOpponent && (
+        <div className="w-full max-w-3xl rounded-[18px] border border-slate-800 bg-[#050814] px-4 py-3 text-[11px] text-slate-200 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="font-semibold text-slate-100">You</span>
+              <span className="font-mono text-lime-300">
+                {formattedUserMetric}
+                {mode === "reps" ? " reps" : ""}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-semibold text-slate-100">
+                {opponentName || "Opponent"}
+              </span>
+              <span className="font-mono text-sky-300">
+                {formattedOpponentMetric}
+                {mode === "reps" ? " reps" : ""}
+              </span>
+            </div>
+          </div>
+          <div className="mt-1">
+            <div className="h-1.5 w-full rounded-full bg-slate-900 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-lime-400 via-emerald-400 to-sky-400 transition-[width] duration-300"
+                style={{ width: `${youPercent}%` }}
+              />
+            </div>
+            {versusSummary && (
+              <p className="mt-1 text-[10px] text-slate-400">
+                {versusSummary}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Bottom rules banner */}
       <div className="w-full max-w-3xl rounded-[18px] border border-slate-700 bg-[#050814] px-6 py-4 text-xs text-slate-200">
