@@ -7,6 +7,7 @@ import {
   Target,
   Trophy,
   User as UserIcon,
+  Clock3,
 } from "lucide-react";
 import RadialOrbitalProfileTimeline from "@/components/ui/radial-orbital-profile-timeline";
 
@@ -65,12 +66,12 @@ export const defaultTimelineData = [
   },
   {
     id: 4,
-    title: "Recent Highlights",
-    subtitle: "Last 7 days",
+    title: "History",
+    subtitle: "Match history",
     content:
-      "Won 3 out of 4 battles. Set a new PR on push-up ladder and matched with two new partners via FitDuo’s quickmatch.",
-    category: "Highlights",
-    icon: Trophy,
+      "Open your full match history to review every battle and training session, with filters for Multiplayer, Solo Practice, and Time Trials.",
+    category: "History",
+    icon: Clock3,
     relatedIds: [2, 5],
     emphasis: "secondary" as const,
     energy: 80,

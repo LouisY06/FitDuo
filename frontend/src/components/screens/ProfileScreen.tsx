@@ -18,7 +18,7 @@ export function ProfileScreen() {
 
   return (
     <main className="min-h-[calc(100vh-120px)] text-neutral-50 flex">
-      <div className="flex-1 flex items-end justify-start px-4 pb-12 bg-transparent">
+      <div className="flex-1 flex items-center justify-center px-4 pb-12 bg-transparent">
         <div className="w-full max-w-6xl">
           <section className="relative rounded-3xl border border-neutral-800/70 bg-transparent backdrop-blur-lg overflow-hidden">
             <div className="absolute top-4 left-4 z-30 flex flex-col gap-2">
@@ -26,9 +26,9 @@ export function ProfileScreen() {
                 variant="outline"
                 size="sm"
                 className="px-4 py-2 text-sm bg-black/40 border-white/20 text-white/80 hover:bg-white/10 hover:text-white"
-                onClick={() => navigate("/app")}
+                onClick={() => navigate("/info")}
               >
-                Home / Global
+                About
               </Button>
               <Button
                 variant="outline"

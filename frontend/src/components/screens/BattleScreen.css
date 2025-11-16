@@ -125,7 +125,7 @@
   gap: 1.25rem;
   box-sizing: border-box;
   /* Shift card down and to the right for final placement */
-  margin-top: 85px; /* moved up by another 25px */
+  margin-top: 65px; /* moved up by 20px */
   margin-left: 100px;
 }
 

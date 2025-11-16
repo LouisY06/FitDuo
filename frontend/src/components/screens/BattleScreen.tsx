@@ -8,7 +8,7 @@ import { useMatchmaking } from "../../hooks/useMatchmaking";
 import type { MatchFoundPayload } from "../../services/matchmaking";
 import "./BattleScreen.css";
 
-export function BattleScreen() {
+export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: () => void }) {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState<number | null>(null);
 
