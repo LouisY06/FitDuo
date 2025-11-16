@@ -27,7 +27,6 @@ import {
   PLANK_FORM_RULES,
   checkInitialSetup,
   checkBodyLine as checkPlankBodyLine,
-  checkPlankBreakage,
   checkSideView as checkPlankSideView,
   checkKneeBend,
   checkPlankInitialSetup,
