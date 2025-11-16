@@ -150,6 +150,54 @@ async def handle_websocket_message(message: dict, game_id: int, player_id: int, 
                     },
                     game_id,
                 )
+                # Start ready phase with server timestamp for synchronization
+                from datetime import datetime
+                ready_phase_start_time = datetime.utcnow().timestamp()
+                await manager.broadcast_to_game(
+                    {
+                        "type": "READY_PHASE_START",
+                        "payload": {
+                            "startTimestamp": ready_phase_start_time,
+                            "durationSeconds": 10,
+                        },
+                    },
+                    game_id,
+                )
+                # Reset ready status for both players when exercise is selected
+                manager.reset_player_ready_status(game_id)
+    elif message_type == "PLAYER_READY":
+        # Handle player ready status
+        is_ready = payload.get("isReady", False)
+        # Track ready status and check if both players are ready
+        both_ready = await manager.set_player_ready(game_id, player_id, is_ready)
+        
+        # Broadcast player ready status to opponent
+        await manager.broadcast_to_game(
+            {
+                "type": "PLAYER_READY",
+                "payload": {
+                    "playerId": player_id,
+                    "isReady": is_ready,
+                },
+            },
+            game_id,
+            exclude_player=player_id,
+        )
+        
+        # If both players are ready, start countdown
+        if both_ready:
+            from datetime import datetime
+            countdown_start_time = datetime.utcnow().timestamp()
+            await manager.broadcast_to_game(
+                {
+                    "type": "COUNTDOWN_START",
+                    "payload": {
+                        "startTimestamp": countdown_start_time,
+                        "durationSeconds": 5,
+                    },
+                },
+                game_id,
+            )
     else:
         # Echo back unknown message types for testing
         await manager.send_personal_message(

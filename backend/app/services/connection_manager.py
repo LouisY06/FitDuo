@@ -8,6 +8,8 @@ class ConnectionManager:
     def __init__(self):
         # Structure: {game_id: {player_id: websocket}}
         self.active_connections: Dict[int, Dict[int, WebSocket]] = {}
+        # Structure: {game_id: {player_id: bool}} - tracks ready status
+        self.player_ready_status: Dict[int, Dict[int, bool]] = {}
 
     async def connect(self, websocket: WebSocket, game_id: int, player_id: int):
         """Accept and register a WebSocket connection"""
@@ -49,4 +51,23 @@ class ConnectionManager:
         if game_id in self.active_connections:
             return list(self.active_connections[game_id].keys())
         return []
+
+    async def set_player_ready(self, game_id: int, player_id: int, is_ready: bool) -> bool:
+        """Set player ready status and return True if both players are ready"""
+        if game_id not in self.player_ready_status:
+            self.player_ready_status[game_id] = {}
+        self.player_ready_status[game_id][player_id] = is_ready
+        
+        # Check if both players are ready
+        if game_id in self.active_connections:
+            connected_players = list(self.active_connections[game_id].keys())
+            if len(connected_players) == 2:
+                ready_status = self.player_ready_status.get(game_id, {})
+                return all(ready_status.get(pid, False) for pid in connected_players)
+        return False
+
+    def reset_player_ready_status(self, game_id: int):
+        """Reset ready status for all players in a game"""
+        if game_id in self.player_ready_status:
+            self.player_ready_status[game_id] = {}
 

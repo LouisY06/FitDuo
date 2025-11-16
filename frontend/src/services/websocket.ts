@@ -34,6 +34,9 @@ export type WebSocketMessageType =
   | "ROUND_END"
   | "FORM_RULES"
   | "EXERCISE_SELECTED"
+  | "PLAYER_READY"
+  | "READY_PHASE_START"
+  | "COUNTDOWN_START"
   | "PING"
   | "PONG"
   | "ERROR"
@@ -109,6 +112,13 @@ export class GameWebSocket {
         this.ws.onclose = (event) => {
           console.log(`WebSocket closed: ${event.code} ${event.reason}`);
           
+          // Don't reconnect if it's a client error (4xx) or if playerId is invalid
+          if (event.code === 1006 || event.code === 4000 || this.playerId === 0) {
+            console.warn("WebSocket connection failed due to client error. Not reconnecting.");
+            this.isManualClose = true;
+            return;
+          }
+          
           // Auto-reconnect if not manually closed
           if (!this.isManualClose && this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
@@ -118,6 +128,8 @@ export class GameWebSocket {
             setTimeout(() => {
               this.connect().catch(console.error);
             }, delay);
+          } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+            console.error("Max reconnection attempts reached. Stopping reconnection.");
           }
         };
       } catch (error) {
@@ -185,6 +197,16 @@ export class GameWebSocket {
     this.send({
       type: "EXERCISE_SELECTED",
       payload: { exerciseId },
+    });
+  }
+
+  /**
+   * Send player ready status
+   */
+  sendPlayerReady(isReady: boolean): void {
+    this.send({
+      type: "PLAYER_READY",
+      payload: { isReady },
     });
   }
 

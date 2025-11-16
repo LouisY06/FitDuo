@@ -28,6 +28,9 @@ export interface UseGameWebSocketOptions {
     exercise_name: string;
     form_rules: Record<string, unknown>;
   }) => void;
+  onPlayerReady?: (playerId: number, isReady: boolean) => void;
+  onReadyPhaseStart?: (startTimestamp: number, durationSeconds: number) => void;
+  onCountdownStart?: (startTimestamp: number, durationSeconds: number) => void;
   onError?: (error: string) => void;
   autoConnect?: boolean;
 }
@@ -41,6 +44,9 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
     onRoundStart,
     onRoundEnd,
     onFormRules,
+    onPlayerReady,
+    onReadyPhaseStart,
+    onCountdownStart,
     onError,
     autoConnect = true,
   } = options;
@@ -49,48 +55,88 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize WebSocket
+  // Store callbacks in refs to avoid recreating WebSocket on callback changes
+  const callbacksRef = useRef({
+    onGameState,
+    onRepIncrement,
+    onRoundStart,
+    onRoundEnd,
+    onFormRules,
+    onPlayerReady,
+    onReadyPhaseStart,
+    onCountdownStart,
+    onError,
+  });
+
+  // Update callbacks ref when they change
   useEffect(() => {
-    if (!autoConnect) return;
+    callbacksRef.current = {
+      onGameState,
+      onRepIncrement,
+      onRoundStart,
+      onRoundEnd,
+      onFormRules,
+      onPlayerReady,
+      onReadyPhaseStart,
+      onCountdownStart,
+      onError,
+    };
+  }, [onGameState, onRepIncrement, onRoundStart, onRoundEnd, onFormRules, onPlayerReady, onReadyPhaseStart, onCountdownStart, onError]);
+
+  // Initialize WebSocket (only recreate when gameId, playerId, or autoConnect changes)
+  useEffect(() => {
+    if (!autoConnect || !gameId || !playerId || playerId === 0) {
+      // Don't try to connect if playerId is invalid
+      if (playerId === 0 && gameId) {
+        console.warn("Cannot connect WebSocket: playerId is 0. Waiting for authentication...");
+      }
+      return;
+    }
+
+    // Disconnect existing connection if gameId or playerId changed
+    if (wsRef.current) {
+      wsRef.current.disconnect();
+      wsRef.current = null;
+    }
 
     const ws = new GameWebSocket(gameId, playerId);
     wsRef.current = ws;
 
-    // Register handlers
+    // Register handlers using refs to get latest callbacks
     const unsubscribers: (() => void)[] = [];
 
-    if (onGameState) {
-      unsubscribers.push(
-        ws.on("GAME_STATE", (message: WebSocketMessage) => {
-          onGameState(message.payload as unknown as GameState);
-        })
-      );
-    }
+    unsubscribers.push(
+      ws.on("GAME_STATE", (message: WebSocketMessage) => {
+        if (callbacksRef.current.onGameState) {
+          callbacksRef.current.onGameState(message.payload as unknown as GameState);
+        }
+      })
+    );
 
-    if (onRepIncrement) {
-      unsubscribers.push(
-        ws.on("REP_INCREMENT", (message: WebSocketMessage) => {
+    unsubscribers.push(
+      ws.on("REP_INCREMENT", (message: WebSocketMessage) => {
+        if (callbacksRef.current.onRepIncrement) {
           const payload = message.payload as { playerId: number; repCount: number };
-          onRepIncrement(payload.playerId, payload.repCount);
-        })
-      );
-    }
+          callbacksRef.current.onRepIncrement(payload.playerId, payload.repCount);
+        }
+      })
+    );
 
-    if (onRoundStart) {
-      unsubscribers.push(
-        ws.on("ROUND_START", (message: WebSocketMessage) => {
+    unsubscribers.push(
+      ws.on("ROUND_START", (message: WebSocketMessage) => {
+        if (callbacksRef.current.onRoundStart) {
           const payload = message.payload as {
             currentRound: number;
             exerciseId?: number;
           };
-          onRoundStart(payload.currentRound, payload.exerciseId);
-        })
-      );
-    }
+          callbacksRef.current.onRoundStart(payload.currentRound, payload.exerciseId);
+        }
+      })
+    );
 
-    if (onRoundEnd) {
-      unsubscribers.push(
-        ws.on("ROUND_END", (message: WebSocketMessage) => {
+    unsubscribers.push(
+      ws.on("ROUND_END", (message: WebSocketMessage) => {
+        if (callbacksRef.current.onRoundEnd) {
           const payload = message.payload as {
             winnerId: number | null;
             loserId: number | null;
@@ -99,32 +145,59 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
             narrative: string;
             strategy: Record<string, unknown>;
           };
-          onRoundEnd(payload);
-        })
-      );
-    }
+          callbacksRef.current.onRoundEnd(payload);
+        }
+      })
+    );
 
-    if (onFormRules) {
-      unsubscribers.push(
-        ws.on("FORM_RULES", (message: WebSocketMessage) => {
-          onFormRules(message.payload as {
+    unsubscribers.push(
+      ws.on("FORM_RULES", (message: WebSocketMessage) => {
+        if (callbacksRef.current.onFormRules) {
+          callbacksRef.current.onFormRules(message.payload as {
             exercise_id: number;
             exercise_name: string;
             form_rules: Record<string, unknown>;
           });
-        })
-      );
-    }
+        }
+      })
+    );
 
-    if (onError) {
-      unsubscribers.push(
-        ws.on("ERROR", (message: WebSocketMessage) => {
-          const errorMsg = message.payload as unknown as string;
-          onError(errorMsg);
-          setError(errorMsg);
-        })
-      );
-    }
+    unsubscribers.push(
+      ws.on("PLAYER_READY", (message: WebSocketMessage) => {
+        if (callbacksRef.current.onPlayerReady) {
+          const payload = message.payload as { playerId: number; isReady: boolean };
+          callbacksRef.current.onPlayerReady(payload.playerId, payload.isReady);
+        }
+      })
+    );
+
+    unsubscribers.push(
+      ws.on("READY_PHASE_START", (message: WebSocketMessage) => {
+        if (callbacksRef.current.onReadyPhaseStart) {
+          const payload = message.payload as { startTimestamp: number; durationSeconds: number };
+          callbacksRef.current.onReadyPhaseStart(payload.startTimestamp, payload.durationSeconds);
+        }
+      })
+    );
+
+    unsubscribers.push(
+      ws.on("COUNTDOWN_START", (message: WebSocketMessage) => {
+        if (callbacksRef.current.onCountdownStart) {
+          const payload = message.payload as { startTimestamp: number; durationSeconds: number };
+          callbacksRef.current.onCountdownStart(payload.startTimestamp, payload.durationSeconds);
+        }
+      })
+    );
+
+    unsubscribers.push(
+      ws.on("ERROR", (message: WebSocketMessage) => {
+        const errorMsg = message.payload as unknown as string;
+        setError(errorMsg);
+        if (callbacksRef.current.onError) {
+          callbacksRef.current.onError(errorMsg);
+        }
+      })
+    );
 
     // Connect
     ws.connect()
@@ -135,7 +208,9 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
       .catch((err) => {
         const errorMsg = err.message || "Failed to connect to game";
         setError(errorMsg);
-        if (onError) onError(errorMsg);
+        if (callbacksRef.current.onError) {
+          callbacksRef.current.onError(errorMsg);
+        }
       });
 
     // Cleanup
@@ -144,17 +219,7 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
       ws.disconnect();
       setIsConnected(false);
     };
-  }, [
-    gameId,
-    playerId,
-    autoConnect,
-    onGameState,
-    onRepIncrement,
-    onRoundStart,
-    onRoundEnd,
-    onFormRules,
-    onError,
-  ]);
+  }, [gameId, playerId, autoConnect]);
 
   // Send rep increment
   const sendRepIncrement = useCallback((repCount: number) => {
@@ -174,6 +239,11 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
   // Send exercise selected
   const sendExerciseSelected = useCallback((exerciseId: number) => {
     wsRef.current?.sendExerciseSelected(exerciseId);
+  }, []);
+
+  // Send player ready
+  const sendPlayerReady = useCallback((isReady: boolean) => {
+    wsRef.current?.sendPlayerReady(isReady);
   }, []);
 
   // Ping
@@ -208,6 +278,7 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
     sendRoundEnd,
     sendRoundStart,
     sendExerciseSelected,
+    sendPlayerReady,
     ping,
     connect,
     disconnect,
