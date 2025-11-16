@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { LiveBattleCard } from "../LiveBattleCard";
 import { CVDetector } from "../../../cv/services/cv-detector";
 import { PUSHUP_FORM_RULES } from "../../../cv/exercises/pushup-params";
-import { SQUAT_FORM_RULES } from "../../../cv/exercises/squat-params";
+import { SQUAT_FORM_RULES, checkStandingForm } from "../../../cv/exercises/squat-params";
 import { PLANK_FORM_RULES } from "../../../cv/exercises/plank-params";
 import { LUNGE_FORM_RULES } from "../../../cv/exercises/lunge-params";
 import { useGameWebSocket } from "../../hooks/useGameWebSocket";
@@ -97,9 +97,15 @@ export function ActiveBattleScreen() {
     narrative: string;
     strategy: Record<string, unknown>;
   } | null>(null);
+  const [roundEndCountdown, setRoundEndCountdown] = useState(5); // 5 second countdown after round ends
   const sendRepIncrementRef = useRef<((repCount: number) => void) | null>(null);
   const sendExerciseSelectedRef = useRef<((exerciseId: number) => void) | null>(null);
   const lastSentRepCountRef = useRef<number>(0);
+  // Refs to track game state for rep callback (to avoid stale closures)
+  const gamePhaseRef = useRef<string>("ready");
+  const userReadyRef = useRef<boolean>(false);
+  const opponentReadyRef = useRef<boolean>(false);
+  const wsSendPlayerReadyRef = useRef<((isReady: boolean) => void) | null>(null);
   
   // Game state derived values
   const gameStateStr = gameState?.status || "countdown";
@@ -118,7 +124,10 @@ export function ActiveBattleScreen() {
       try {
         const user = await getCurrentUser();
         if (user?.id) {
+          console.log(`✅ Player ID set: ${user.id}`);
           setPlayerId(user.id);
+        } else {
+          console.warn("⚠️ getCurrentUser() returned no ID");
         }
       } catch (error) {
         console.error("Failed to get current user:", error);
@@ -228,9 +237,10 @@ export function ActiveBattleScreen() {
 
   // Handle countdown start from server (for timer synchronization)
   const handleCountdownStart = useCallback((startTimestamp: number, durationSeconds: number) => {
-    console.log(`⏱️ Countdown started at server time: ${startTimestamp}`);
+    console.log(`⏱️ COUNTDOWN_START received from server: startTimestamp=${startTimestamp}, durationSeconds=${durationSeconds}`);
     setCountdownStartTime(startTimestamp);
     setGamePhase("countdown");
+    console.log(`✅ Game phase changed to: countdown`);
   }, []);
 
   // Note: Countdown start is now handled by the server when both players are ready
@@ -263,14 +273,35 @@ export function ActiveBattleScreen() {
     return () => clearInterval(interval);
   }, [gamePhase, countdownStartTime]);
 
+  // Update refs when state changes
+  useEffect(() => {
+    gamePhaseRef.current = gamePhase;
+  }, [gamePhase]);
+  
+  useEffect(() => {
+    userReadyRef.current = userReady;
+  }, [userReady]);
+  
+  useEffect(() => {
+    opponentReadyRef.current = opponentReady;
+  }, [opponentReady]);
+
   // Game timer (1 minute) - only for non-plank exercises
   useEffect(() => {
-    if (gamePhase !== "live" || selectedExercise === "plank") return;
+    if (gamePhase !== "live" || selectedExercise === "plank") {
+      // Reset timer when not live
+      if (gamePhase !== "live") {
+        setTimeRemaining(durationSeconds);
+      }
+      return;
+    }
+
+    // Reset timer to full duration when game becomes live
+    setTimeRemaining(durationSeconds);
 
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
           // Time's up! Determine winner
           setGamePhase("ended");
           // Determine winner based on reps
@@ -297,14 +328,37 @@ export function ActiveBattleScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [gamePhase, selectedExercise, playerId, gameState]);
+  }, [gamePhase, selectedExercise, playerId, gameState, durationSeconds]);
 
   const handlePlayerReady = useCallback((playerIdFromWS: number, isReady: boolean) => {
-    if (playerId && playerIdFromWS !== playerId) {
-      console.log(`✅ Opponent ready status: ${isReady}`);
-      setOpponentReady(isReady);
+    console.log(`📨 PLAYER_READY received: playerId=${playerIdFromWS}, isReady=${isReady}, myPlayerId=${playerId}, gameState=${gameState ? JSON.stringify({playerA: gameState.playerA.id, playerB: gameState.playerB.id}) : 'null'}`);
+    
+    // The backend sends PLAYER_READY messages excluding the sender (exclude_player=player_id)
+    // So if we receive a PLAYER_READY message, it's always from the opponent
+    // However, let's double-check to be safe
+    
+    // If we have playerId, verify it's not our own
+    if (playerId && playerIdFromWS === playerId) {
+      console.warn(`⚠️ Received PLAYER_READY from ourselves (shouldn't happen - backend excludes sender): playerId=${playerIdFromWS}`);
+      return; // Ignore our own ready status
     }
-  }, [playerId]);
+    
+    // Verify the playerIdFromWS matches one of the players in the game
+    if (gameState) {
+      const isPlayerA = playerIdFromWS === gameState.playerA.id;
+      const isPlayerB = playerIdFromWS === gameState.playerB.id;
+      
+      if (!isPlayerA && !isPlayerB) {
+        console.warn(`⚠️ Received PLAYER_READY from unknown player: playerId=${playerIdFromWS} (not in game state)`);
+        return;
+      }
+    }
+    
+    // This is the opponent's ready status - update it
+    console.log(`✅ Setting opponent ready status: ${isReady} (from playerId=${playerIdFromWS})`);
+    setOpponentReady(isReady);
+    console.log(`📊 Current ready status - User: ${userReady}, Opponent: ${isReady}`);
+  }, [playerId, gameState, userReady]);
 
   // WebSocket handlers (must be defined before useGameWebSocket)
   const handleGameState = useCallback((state: GameState) => {
@@ -420,6 +474,7 @@ export function ActiveBattleScreen() {
     console.log("🏁 Round ended:", data);
     setRoundEndData(data);
     setShowRoundEnd(true);
+    setRoundEndCountdown(5); // Reset countdown
     
     // Determine who chooses next: loser chooses, or if tie, alternate
     let nextChooser: number | null = null;
@@ -442,12 +497,9 @@ export function ActiveBattleScreen() {
       if (currentRound < 3 && nextChooser) {
         setShowRoundEnd(false);
         setSelectedExercise(null);
-        // Only show exercise selection if it's this player's turn
-        if (nextChooser === playerId) {
-          setShowExerciseSelection(true);
-        } else {
-          setShowExerciseSelection(false);
-        }
+        // Show exercise selection screen for both players
+        // One will see the selection UI, the other will see the waiting screen
+        setShowExerciseSelection(true);
       }
     }, 5000); // Show round end screen for 5 seconds
   }, [currentRound, whoseTurnToChoose, playerId, gameState]);
@@ -507,7 +559,31 @@ export function ActiveBattleScreen() {
     autoConnect: !!gameId && !!playerId,
   });
 
+  // Keep wsSendPlayerReady ref up to date
+  useEffect(() => {
+    wsSendPlayerReadyRef.current = wsSendPlayerReady || null;
+  }, [wsSendPlayerReady]);
+
+  // Round end countdown timer
+  useEffect(() => {
+    if (!showRoundEnd || roundEndCountdown <= 0) return;
+
+    const interval = setInterval(() => {
+      setRoundEndCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [showRoundEnd, roundEndCountdown]);
+
   // Detect starting position during ready phase
+  // TEMPORARILY COMMENTED OUT FOR TESTING - using manual button instead
+  /*
   useEffect(() => {
     if (!detectorRef.current || !isCVReady || gamePhase !== "ready" || !selectedExercise) return;
 
@@ -516,7 +592,8 @@ export function ActiveBattleScreen() {
     
     // Track consecutive valid frames to avoid false positives
     let validFrameCount = 0;
-    const REQUIRED_VALID_FRAMES = 15; // Need 15 consecutive valid frames (about 1.5 seconds at 30fps)
+    const CHECK_INTERVAL_MS = 100; // Check every 100ms (10 checks per second)
+    const REQUIRED_VALID_FRAMES = 20; // Need 20 consecutive valid checks = 2 seconds (10 checks/second * 2 seconds = 20)
     
     // Import CV functions for starting position detection
     const checkStartingPosition = async () => {
@@ -540,9 +617,9 @@ export function ActiveBattleScreen() {
         const isAtTop = !repState.isDown;
         return isAtTop;
       } else if (selectedExercise === "squat") {
-        // For squats: form must be valid AND standing (not in down position)
-        const isStanding = !repState.isDown;
-        return isStanding;
+        // For squats: use checkStandingForm to verify standing position
+        const standingCheck = checkStandingForm(landmarks);
+        return standingCheck.isValid;
       } else if (selectedExercise === "plank") {
         // For planks: form must be valid (plank position check is in form validation)
         return true;
@@ -560,27 +637,45 @@ export function ActiveBattleScreen() {
       // If in starting position, increment valid frame count
       if (isInStartingPosition) {
         validFrameCount++;
-        if (validFrameCount >= REQUIRED_VALID_FRAMES && !userReady) {
+        const requiredChecks = REQUIRED_VALID_FRAMES; // 60 checks = 2 seconds at 30fps checking every 100ms
+        if (validFrameCount >= requiredChecks && !userReady) {
           setUserReady(true);
           setIsInStartingPosition(true);
-          if (wsSendPlayerReady) {
-            wsSendPlayerReady(true);
-            console.log("✅ Player ready - in starting position");
+          const sendReady = wsSendPlayerReadyRef.current;
+          if (sendReady) {
+            console.log(`📤 Sending PLAYER_READY=true to server...`);
+            sendReady(true);
+            console.log(`✅ Player ready - held starting position for 2 seconds (${validFrameCount} checks)`);
+          } else {
+            console.error(`❌ wsSendPlayerReady is not available! Cannot send ready status. wsSendPlayerReady=${wsSendPlayerReady}, wsSendPlayerReadyRef.current=${wsSendPlayerReadyRef.current}`);
+          }
+        } else if (validFrameCount < requiredChecks) {
+          // Still counting up - show progress
+          const progress = Math.min(100, (validFrameCount / requiredChecks) * 100);
+          if (validFrameCount % 10 === 0) { // Log every 10 checks to avoid spam
+            console.log(`⏳ Holding position... ${progress.toFixed(0)}% (${validFrameCount}/${requiredChecks})`);
           }
         }
       } else {
         // Reset count if not in starting position
+        if (validFrameCount > 0) {
+          console.log(`⚠️ Lost starting position - resetting count (was at ${validFrameCount}/${REQUIRED_VALID_FRAMES})`);
+        }
         validFrameCount = 0;
         if (userReady) {
           setUserReady(false);
           setIsInStartingPosition(false);
-          if (wsSendPlayerReady) {
-            wsSendPlayerReady(false);
-            console.log("⚠️ Player no longer in starting position");
+          const sendReady = wsSendPlayerReadyRef.current;
+          if (sendReady) {
+            console.log(`📤 Sending PLAYER_READY=false to server...`);
+            sendReady(false);
+            console.log("❌ Player no longer ready - moved out of starting position");
+          } else {
+            console.error(`❌ wsSendPlayerReady is not available! Cannot send ready status.`);
           }
         }
       }
-    }, 100); // Check every 100ms for more responsive detection
+    }, CHECK_INTERVAL_MS);
 
     return () => {
       clearInterval(checkInterval);
@@ -588,7 +683,8 @@ export function ActiveBattleScreen() {
         detectorRef.current.stopDetection();
       }
     };
-  }, [gamePhase, isCVReady, selectedExercise, userReady, wsSendPlayerReady]);
+  }, [gamePhase, isCVReady, selectedExercise, userReady]);
+  */
 
   // Start/stop CV detection based on game phase
   useEffect(() => {
@@ -678,13 +774,25 @@ export function ActiveBattleScreen() {
           detector.setFormRules(exerciseRules, exerciseName);
           
           // Set rep callback to send reps over WebSocket
+          // Only count reps when both players are ready and game is live
           detector.setRepCallback((count) => {
-            setUserReps(count);
-            // Send rep update via WebSocket only when count increases
-            if (sendRepIncrementRef.current && count > lastSentRepCountRef.current) {
-              sendRepIncrementRef.current(count);
-              lastSentRepCountRef.current = count;
-              console.log(`📤 Sent rep update: ${count}`);
+            // Use refs to get latest values (avoid stale closures)
+            const currentPhase = gamePhaseRef.current;
+            const currentUserReady = userReadyRef.current;
+            const currentOpponentReady = opponentReadyRef.current;
+            
+            // Only update reps if game is live and both players are ready
+            if (currentPhase === "live" && currentUserReady && currentOpponentReady) {
+              setUserReps(count);
+              // Send rep update via WebSocket only when count increases
+              if (sendRepIncrementRef.current && count > lastSentRepCountRef.current) {
+                sendRepIncrementRef.current(count);
+                lastSentRepCountRef.current = count;
+                console.log(`📤 Sent rep update: ${count}`);
+              }
+            } else {
+              // Game not live or players not ready - don't count reps
+              console.log(`⏸️ Rep detected but not counting: gamePhase=${currentPhase}, userReady=${currentUserReady}, opponentReady=${currentOpponentReady}`);
             }
           });
 
@@ -791,12 +899,17 @@ export function ActiveBattleScreen() {
                 </div>
               )}
 
-              {/* Next Round Info */}
+              {/* Next Round Info with Countdown */}
               {currentRound < 3 && (
                 <div className="mt-6">
-                  <p className="text-slate-400">
-                    Next round starting soon...
-                  </p>
+                  <div className="inline-flex items-center gap-3 bg-slate-700/30 border border-slate-600 rounded-xl px-6 py-3">
+                    <span className="text-2xl">{roundEndCountdown}</span>
+                    <p className="text-slate-400">
+                      {roundEndData.loserId === playerId 
+                        ? "Get ready to choose the next exercise..."
+                        : "Waiting for opponent to choose next exercise..."}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -1015,10 +1128,31 @@ export function ActiveBattleScreen() {
                   </div>
                 </div>
                 {!isInStartingPosition && (
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-slate-400 mb-4">
                     Position yourself in the starting position
                   </p>
                 )}
+                {/* Manual Ready Button for Testing */}
+                <button
+                  onClick={() => {
+                    const newReadyState = !userReady;
+                    setUserReady(newReadyState);
+                    const sendReady = wsSendPlayerReadyRef.current;
+                    if (sendReady) {
+                      console.log(`📤 [MANUAL] Sending PLAYER_READY=${newReadyState} to server...`);
+                      sendReady(newReadyState);
+                    } else {
+                      console.error(`❌ [MANUAL] wsSendPlayerReady is not available!`);
+                    }
+                  }}
+                  className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                    userReady
+                      ? "bg-red-500 hover:bg-red-600 text-white"
+                      : "bg-lime-500 hover:bg-lime-600 text-black"
+                  }`}
+                >
+                  {userReady ? "Unready" : "Mark as Ready"}
+                </button>
               </div>
             )}
 
