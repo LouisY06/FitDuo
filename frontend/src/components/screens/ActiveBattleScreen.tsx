@@ -481,8 +481,9 @@ export function ActiveBattleScreen() {
   const handleRoundStart = useCallback((round: number, exerciseId?: number) => {
     console.log(`🎮 Round ${round} starting with exercise ID: ${exerciseId}`);
     console.log(`🎮 Current showExerciseSelection: ${showExerciseSelection}, selectedExercise: ${selectedExercise}`);
+    
     setCurrentRound(round);
-    setShowExerciseSelection(false); // Hide exercise selection screen
+    setShowExerciseSelection(false); // Hide exercise selection/waiting screen immediately
     setShowRoundEnd(false);
     setRoundEndData(null);
     
@@ -501,9 +502,17 @@ export function ActiveBattleScreen() {
       };
       const exercise = exerciseIdMap[exerciseId];
       if (exercise) {
-        console.log(`🎮 Setting exercise from ROUND_START: ${exercise}`);
+        console.log(`🎮 Setting exercise from ROUND_START: ${exercise} (round ${round})`);
         setSelectedExercise(exercise);
+        // Also hide exercise selection screen here to ensure it's hidden
+        setShowExerciseSelection(false);
+        // Set game phase to ready so waiting screen condition fails
+        setGamePhase("ready");
+      } else {
+        console.warn(`⚠️ Unknown exercise ID in ROUND_START: ${exerciseId}`);
       }
+    } else {
+      console.warn(`⚠️ ROUND_START received without exerciseId for round ${round}`);
     }
     
     // Reset reps for new round
@@ -2158,7 +2167,8 @@ export function ActiveBattleScreen() {
   }
 
   // Exercise Selection Screen (only show if it's this player's turn)
-  if (showExerciseSelection && !selectedExercise && whoseTurnToChoose === playerId) {
+  // Also check that we haven't received ROUND_START yet
+  if (showExerciseSelection && !selectedExercise && whoseTurnToChoose === playerId && gamePhase !== "ready" && gamePhase !== "countdown" && gamePhase !== "live") {
     // If we have roundEndData (meaning a round just ended), we're selecting for the NEXT round
     // so display currentRound + 1. Otherwise (first round), display currentRound
     const hasCompletedAnyRound = roundEndData !== null;
@@ -2276,7 +2286,8 @@ export function ActiveBattleScreen() {
   }
 
   // Waiting for opponent to choose exercise (only show if exercise not yet selected)
-  if (showExerciseSelection && !selectedExercise && whoseTurnToChoose !== playerId && whoseTurnToChoose !== null) {
+  // Also check that we haven't received ROUND_START yet (which would set selectedExercise)
+  if (showExerciseSelection && !selectedExercise && whoseTurnToChoose !== playerId && whoseTurnToChoose !== null && gamePhase !== "ready" && gamePhase !== "countdown" && gamePhase !== "live") {
     // If we have roundEndData (meaning a round just ended), we're waiting for the NEXT round
     // so display currentRound + 1. Otherwise (first round), display currentRound
     const hasCompletedAnyRound = roundEndData !== null;
