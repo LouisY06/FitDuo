@@ -516,17 +516,23 @@ export class CVDetector {
     const shoulderMidY = (landmarks[LEFT_SHOULDER].y + landmarks[RIGHT_SHOULDER].y) / 2;
     const hipMidY = (landmarks[LEFT_HIP].y + landmarks[RIGHT_HIP].y) / 2;
 
-    // Vertical distance from shoulders to hips (smaller = more upright)
+    // Vertical distance from shoulders to hips
+    // When lying down: shoulders and hips at similar Y (small torsoAngle)
+    // When sitting up: shoulders higher than hips (large torsoAngle)
     const torsoAngle = Math.abs(shoulderMidY - hipMidY);
 
     // Get form rules (default thresholds)
-    const downThreshold = this.formRules.torso_angle?.max ?? 0.15; // More horizontal
-    const upThreshold = this.formRules.torso_angle?.min ?? 0.05; // More vertical
+    // When lying down: torsoAngle is small (< 0.05)
+    // When sitting up: torsoAngle is large (> 0.15)
+    const downThreshold = this.formRules.torso_angle?.max ?? 0.05; // Small angle = lying down
+    const upThreshold = this.formRules.torso_angle?.min ?? 0.15; // Large angle = sitting up
 
-    // Detect rep cycle: down (torso more horizontal) -> up (torso more vertical)
-    if (!this.repState.isDown && torsoAngle > downThreshold) {
+    // Detect rep cycle: down (lying - small angle) -> up (sitting - large angle)
+    if (!this.repState.isDown && torsoAngle < downThreshold) {
+      // Lying down - small torso angle
       this.repState.isDown = true;
-    } else if (this.repState.isDown && torsoAngle < upThreshold) {
+    } else if (this.repState.isDown && torsoAngle > upThreshold) {
+      // Sitting up - large torso angle
       this.repState.isDown = false;
       this.repState.repCount++;
       if (this.onRepDetected) {

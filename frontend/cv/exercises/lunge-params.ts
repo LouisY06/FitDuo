@@ -2,7 +2,8 @@
  * Lunge Exercise Parameters (Alternating)
  * 
  * Rep Detection: Both front and back knees must reach 90° angle
- * Form Check: Front shin vertical, torso upright
+ * Form Check: Front shin vertical, torso upright, side view (parallel to camera)
+ * IMPORTANT: Must alternate legs - multiple lunges in same direction only count as one rep
  */
 
 import type { PoseLandmark } from "../types/cv";
@@ -27,24 +28,118 @@ export const LUNGE_LANDMARKS = {
 } as const;
 
 /**
- * Determine which leg is forward (front leg)
+ * Check if person is in side view (parallel to camera) for lunges
+ * @param landmarks - Array of pose landmarks
+ * @returns true if person is in side view
+ */
+export function checkSideView(landmarks: PoseLandmark[]): {
+  isValid: boolean;
+  error?: string;
+} {
+  // Calculate midpoints for body orientation check
+  const shoulderMid = {
+    x: (landmarks[LUNGE_LANDMARKS.LEFT_SHOULDER].x + 
+        landmarks[LUNGE_LANDMARKS.RIGHT_SHOULDER].x) / 2,
+    y: (landmarks[LUNGE_LANDMARKS.LEFT_SHOULDER].y + 
+        landmarks[LUNGE_LANDMARKS.RIGHT_SHOULDER].y) / 2,
+  };
+  const ankleMid = {
+    x: (landmarks[LUNGE_LANDMARKS.LEFT_ANKLE].x + 
+        landmarks[LUNGE_LANDMARKS.RIGHT_ANKLE].x) / 2,
+    y: (landmarks[LUNGE_LANDMARKS.LEFT_ANKLE].y + 
+        landmarks[LUNGE_LANDMARKS.RIGHT_ANKLE].y) / 2,
+  };
+
+  // For side view lunges:
+  // 1. Body should be oriented horizontally (shoulder-ankle line should be mostly horizontal)
+  // 2. Shoulders should be at similar Y (both visible from side)
+  // 3. Hips should be at similar Y
+  // 4. The X difference between shoulder and ankle should be significant (body extends horizontally)
+
+  // Check if shoulders are at similar Y (within 5% of frame height)
+  const shoulderYDiff = Math.abs(
+    landmarks[LUNGE_LANDMARKS.LEFT_SHOULDER].y - 
+    landmarks[LUNGE_LANDMARKS.RIGHT_SHOULDER].y
+  );
+  const shoulderYThreshold = 0.05; // 5% of frame height
+
+  // Check if hips are at similar Y
+  const hipYDiff = Math.abs(
+    landmarks[LUNGE_LANDMARKS.LEFT_HIP].y - 
+    landmarks[LUNGE_LANDMARKS.RIGHT_HIP].y
+  );
+  const hipYThreshold = 0.05; // 5% of frame height
+
+  // Check if body is oriented horizontally (shoulder-ankle line)
+  // In side view, the body extends horizontally, so X difference should be significant
+  // and Y difference should be relatively small compared to X
+  const bodyDeltaX = Math.abs(ankleMid.x - shoulderMid.x);
+  const bodyDeltaY = Math.abs(ankleMid.y - shoulderMid.y);
+  const bodyLength = Math.sqrt(bodyDeltaX * bodyDeltaX + bodyDeltaY * bodyDeltaY);
+
+  // Body should extend horizontally: X difference should be at least 30% of body length
+  // and Y difference should be less than 50% of body length (body is mostly horizontal)
+  const horizontalRatio = bodyLength > 0.01 ? bodyDeltaX / bodyLength : 0;
+  const verticalRatio = bodyLength > 0.01 ? bodyDeltaY / bodyLength : 1;
+
+  // Validate side view:
+  // 1. Shoulders aligned (similar Y)
+  // 2. Hips aligned (similar Y)
+  // 3. Body extends horizontally (X > 30% of body length, Y < 50% of body length)
+  if (shoulderYDiff > shoulderYThreshold) {
+    return {
+      isValid: false,
+      error: "Position yourself sideways - both shoulders should be visible",
+    };
+  }
+
+  if (hipYDiff > hipYThreshold) {
+    return {
+      isValid: false,
+      error: "Position yourself sideways - both hips should be visible",
+    };
+  }
+
+  if (horizontalRatio < 0.3 || verticalRatio > 0.5) {
+    return {
+      isValid: false,
+      error: "Position yourself sideways - body should extend horizontally",
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Determine which leg is forward (front leg) for side view
  * @param landmarks - Array of pose landmarks
  * @returns 'left' | 'right' | null
  */
 export function determineFrontLeg(landmarks: PoseLandmark[]): 'left' | 'right' | null {
-  // Front leg is the one with the knee further forward (lower X value in screen space)
+  // For side view, the front leg is the one further forward (closer to camera)
+  // In MediaPipe coordinates, X=0 is left, X=1 is right
+  // The front leg's knee/ankle will have a lower X value (closer to left side of screen)
+  
   const leftKneeX = landmarks[LUNGE_LANDMARKS.LEFT_KNEE].x;
   const rightKneeX = landmarks[LUNGE_LANDMARKS.RIGHT_KNEE].x;
   
-  // In MediaPipe, X=0 is left, X=1 is right
-  // So lower X = more forward (left side of screen)
-  // But we need to check which knee is actually in front
-  // Use ankle position as reference
   const leftAnkleX = landmarks[LUNGE_LANDMARKS.LEFT_ANKLE].x;
   const rightAnkleX = landmarks[LUNGE_LANDMARKS.RIGHT_ANKLE].x;
   
-  // Front leg has knee closer to center than back leg
-  // Simplified: compare knee positions
+  // In side view, the front leg is the one with knee/ankle further forward
+  // Lower X value = more forward (closer to camera)
+  // Use average of knee and ankle X positions for more stable detection
+  const leftAvgX = (leftKneeX + leftAnkleX) / 2;
+  const rightAvgX = (rightKneeX + rightAnkleX) / 2;
+  
+  // The leg with lower X (more forward) is the front leg
+  if (leftAvgX < rightAvgX) {
+    return 'left';
+  } else if (rightAvgX < leftAvgX) {
+    return 'right';
+  }
+  
+  // Fallback: compare knee positions only
   if (leftKneeX < rightKneeX) {
     return 'left';
   } else if (rightKneeX < leftKneeX) {
