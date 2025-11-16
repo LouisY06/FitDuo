@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from sqlmodel import Session, select
 from app.models import User, PlayerStats, GameSession, GameStatus
+from collections import OrderedDict
 import asyncio
 import logging
 
@@ -36,9 +37,11 @@ class MatchmakingQueue:
     """
     
     def __init__(self):
-        self.queue: Dict[int, QueuedPlayer] = {}  # player_id -> QueuedPlayer
+        # Use OrderedDict to preserve insertion order for FIFO matching
+        self.queue: OrderedDict[int, QueuedPlayer] = OrderedDict()  # player_id -> QueuedPlayer (preserves order)
         self.matchmaking_websockets: Dict[int, any] = {}  # player_id -> WebSocket
         self.lock = asyncio.Lock()
+        self.matching_lock = asyncio.Lock()  # Separate lock for matching to prevent concurrent matches
         # Match threshold no longer used (FIFO matching)
         self.match_threshold = 100.0  # Kept for backward compatibility but not used
         self.queue_timeout = timedelta(minutes=5)  # Remove stale players after 5 minutes
@@ -118,7 +121,7 @@ class MatchmakingQueue:
             return False
     
     async def get_queue_status(self, player_id: int) -> Dict:
-        """Get queue status for a player."""
+        """Get queue status for a player (FIFO position)."""
         async with self.lock:
             if player_id not in self.queue:
                 return {
@@ -127,20 +130,45 @@ class MatchmakingQueue:
                     "estimated_wait": 0,
                 }
             
-            # Calculate queue position (players with similar skill)
-            player = self.queue[player_id]
-            similar_players = sum(
-                1 for p in self.queue.values()
-                if p.player_id != player_id
-                and self._calculate_match_score(player, p) < self.match_threshold
-            )
+            # Calculate actual position in FIFO queue
+            queue_items = list(self.queue.items())
+            player_position = None
+            for idx, (pid, _) in enumerate(queue_items):
+                if pid == player_id:
+                    player_position = idx
+                    break
             
-            # Estimate wait time (rough calculation)
-            estimated_wait = max(10, similar_players * 5)  # 5 seconds per similar player, min 10s
+            if player_position is None:
+                return {
+                    "in_queue": False,
+                    "queue_position": 0,
+                    "estimated_wait": 0,
+                }
+            
+            # Position in queue (0-indexed, so add 1 for display)
+            # If you're first (position 0), you need 1 more player
+            # If you're second (position 1), you're next to be matched
+            queue_position = player_position + 1
+            
+            # Estimate wait time based on position
+            # If you're first, wait for 1 more player (could be instant or take time)
+            # If you're second, you're next (should be instant)
+            # If you're third+, estimate based on how many players ahead
+            if player_position == 0:
+                # First in queue - waiting for second player
+                estimated_wait = 30  # Average wait for next player to join
+            elif player_position == 1:
+                # Second in queue - should match immediately
+                estimated_wait = 5
+            else:
+                # Third or later - estimate based on position
+                # Each pair ahead = ~30 seconds (time for a match to complete + new player to join)
+                pairs_ahead = player_position // 2
+                estimated_wait = max(10, pairs_ahead * 30)
             
             return {
                 "in_queue": True,
-                "queue_position": similar_players + 1,
+                "queue_position": queue_position,
                 "estimated_wait": estimated_wait,
             }
     
@@ -169,26 +197,34 @@ class MatchmakingQueue:
         session: Optional[Session] = None
     ) -> Optional[Dict]:
         """
-        Try to find a match for a player (first-come-first-serve).
+        Try to find a match for a player (strict FIFO - matches first two players in queue).
         Returns match info if found, None otherwise.
         """
-        if player_id not in self.queue:
-            return None
-        
-        player = self.queue[player_id]
-        
-        # Find first available opponent (FIFO - first come first serve)
-        for opponent_id, opponent in self.queue.items():
-            if opponent_id == player_id:
-                continue
-            
-            # Match immediately with first available opponent
-            logger.info(f"Match found! Player {player_id} vs Player {opponent_id} (FIFO matching)")
-            return await self._create_match(player, opponent, session)
-        
-        # No opponents available
-        logger.info(f"No opponents found for player {player_id} (queue size: {len(self.queue)})")
-        return None
+        # Use matching lock to ensure only one match happens at a time
+        async with self.matching_lock:
+            async with self.lock:
+                # Check if player is still in queue
+                if player_id not in self.queue:
+                    return None
+                
+                # Need at least 2 players for a match
+                if len(self.queue) < 2:
+                    logger.info(f"Not enough players for match (queue size: {len(self.queue)})")
+                    return None
+                
+                # Get first two players in queue (FIFO order)
+                queue_items = list(self.queue.items())
+                first_player_id, first_player = queue_items[0]
+                second_player_id, second_player = queue_items[1]
+                
+                # Verify both players are still in queue (they might have left)
+                if first_player_id not in self.queue or second_player_id not in self.queue:
+                    logger.warning("Players left queue during matching, retrying...")
+                    return None
+                
+                # Match the first two players in queue (strict FIFO)
+                logger.info(f"Match found! Player {first_player_id} vs Player {second_player_id} (FIFO: first two in queue)")
+                return await self._create_match(first_player, second_player, session)
     
     def _calculate_match_score(self, player1: QueuedPlayer, player2: QueuedPlayer) -> float:
         """
@@ -199,24 +235,27 @@ class MatchmakingQueue:
         return 0.0
     
     async def _try_match_all_players(self, session: Optional[Session] = None):
-        """Try to match all players in the queue."""
+        """Try to match players in the queue (FIFO - matches first two players)."""
         async with self.lock:
-            player_ids = list(self.queue.keys())
+            queue_size = len(self.queue)
         
-        # Try matching each player
-        # Only try first player to avoid duplicate matches
-        if len(player_ids) >= 2:
-            first_player = player_ids[0]
-            if first_player in self.queue:  # Check still in queue
-                logger.info(f"Trying to match all players in queue (size: {len(player_ids)})")
-                # Create a new session if none provided
-                if session is None:
-                    from app.database.connection import get_session
-                    with next(get_session()) as new_session:
-                        await self._try_match_and_notify(first_player, new_session)
+        # Only try to match if we have at least 2 players
+        if queue_size >= 2:
+            # Get first player in queue for matching attempt
+            async with self.lock:
+                if len(self.queue) >= 2:
+                    first_player_id = next(iter(self.queue))
+                    logger.info(f"Trying to match players in queue (size: {queue_size}, matching first player: {first_player_id})")
                 else:
-                    await self._try_match_and_notify(first_player, session)
-                await asyncio.sleep(0.5)  # Small delay
+                    return
+            
+            # Create a new session if none provided
+            if session is None:
+                from app.database.connection import get_session
+                with next(get_session()) as new_session:
+                    await self._try_match_and_notify(first_player_id, new_session)
+            else:
+                await self._try_match_and_notify(first_player_id, session)
     
     async def _create_match(
         self,
