@@ -117,7 +117,7 @@ export function ActiveBattleScreen() {
   const wsSendPlayerReadyRef = useRef<((isReady: boolean) => void) | null>(null);
   
   // Game state derived values
-  const _gameStateStr = gameState?.status || "countdown";
+  // const gameStateStr = gameState?.status || "countdown"; // Unused
   const durationSeconds = 60;
   
   // Get selected exercise form rules
@@ -230,12 +230,12 @@ export function ActiveBattleScreen() {
   }, [selectedExercise, gamePhase, readyPhaseStartTime]);
 
   // Handle ready phase start from server (for timer synchronization)
-  const handleReadyPhaseStart = useCallback((startTimestamp: number, _unusedDuration: number) => {
+  const handleReadyPhaseStart = useCallback((startTimestamp: number) => {
     console.log(`⏱️ Ready phase started at server time: ${startTimestamp}`);
     // Convert server timestamp (seconds) to client timestamp (milliseconds)
     // Account for potential clock skew by using relative time
-    const _unusedServerTimeMs = startTimestamp * 1000;
-    const _unusedClientTimeMs = Date.now();
+    // const serverTimeMs = startTimestamp * 1000; // Unused
+    // const clientTimeMs = Date.now(); // Unused
     // Store the server timestamp as-is, timer will calculate relative to current time
     setReadyPhaseStartTime(startTimestamp);
     setGamePhase("ready");

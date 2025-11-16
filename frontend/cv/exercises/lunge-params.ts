@@ -279,10 +279,8 @@ export function checkTorsoPosture(landmarks: PoseLandmark[]): {
   error?: string;
 } {
   // Calculate shoulder-hip alignment
-  const shoulderMidY = (landmarks[LUNGE_LANDMARKS.LEFT_SHOULDER].y + 
-                        landmarks[LUNGE_LANDMARKS.RIGHT_SHOULDER].y) / 2;
-  const hipMidY = (landmarks[LUNGE_LANDMARKS.LEFT_HIP].y + 
-                   landmarks[LUNGE_LANDMARKS.RIGHT_HIP].y) / 2;
+  // const shoulderMidY = (landmarks[LUNGE_LANDMARKS.LEFT_SHOULDER].y + landmarks[LUNGE_LANDMARKS.RIGHT_SHOULDER].y) / 2;
+  // const hipMidY = (landmarks[LUNGE_LANDMARKS.LEFT_HIP].y + landmarks[LUNGE_LANDMARKS.RIGHT_HIP].y) / 2;
   
   // Torso should remain upright (shoulders above hips)
   // Check if torso is leaning too far forward

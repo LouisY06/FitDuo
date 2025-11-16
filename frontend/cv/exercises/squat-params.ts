@@ -380,10 +380,8 @@ export function checkTorsoPosture(landmarks: PoseLandmark[]): {
   error?: string;
 } {
   // Calculate shoulder-hip angle (should be relatively vertical)
-  const shoulderMidY = (landmarks[SQUAT_LANDMARKS.LEFT_SHOULDER].y + 
-                    landmarks[SQUAT_LANDMARKS.RIGHT_SHOULDER].y) / 2;
-  const hipMidY = (landmarks[SQUAT_LANDMARKS.LEFT_HIP].y + 
-                   landmarks[SQUAT_LANDMARKS.RIGHT_HIP].y) / 2;
+  // const shoulderMidY = (landmarks[SQUAT_LANDMARKS.LEFT_SHOULDER].y + landmarks[SQUAT_LANDMARKS.RIGHT_SHOULDER].y) / 2;
+  // const hipMidY = (landmarks[SQUAT_LANDMARKS.LEFT_HIP].y + landmarks[SQUAT_LANDMARKS.RIGHT_HIP].y) / 2;
   
   // Torso should maintain relatively neutral position
   // Check if torso is leaning too far forward or backward
