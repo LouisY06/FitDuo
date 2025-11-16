@@ -24,6 +24,7 @@ import type {
 } from "../types/cv";
 import { validatePushupForm, calculateElbowAngle, PUSHUP_REP_PARAMS } from "../exercises/pushup-params";
 import { validateSquatForm, calculateKneeAngle, getHipYPosition, getKneeYPosition, isHipCloseToKnees, checkStandingForm, SQUAT_REP_PARAMS } from "../exercises/squat-params";
+import { checkBodyLine, checkPlankBreakage, checkInitialSetup, checkSideView as checkPlankSideView, checkKneeBend, checkPlankInitialSetup, checkKneeCollapse } from "../exercises/plank-params";
 
 export class CVDetector {
   private poseLandmarker: PoseLandmarker | null = null;
@@ -544,32 +545,71 @@ export class CVDetector {
   }
 
   private detectStaticHold(landmarks: PoseLandmark[]): void {
-    // Key points for stability check (shoulders, hips)
-    const LEFT_SHOULDER = 11;
-    const RIGHT_SHOULDER = 12;
-    const LEFT_HIP = 23;
-    const RIGHT_HIP = 24;
-
-    const shoulderMidY = (landmarks[LEFT_SHOULDER].y + landmarks[RIGHT_SHOULDER].y) / 2;
-    const hipMidY = (landmarks[LEFT_HIP].y + landmarks[RIGHT_HIP].y) / 2;
-
-    // Calculate vertical alignment (for plank/wall sit)
-    const verticalAlignment = Math.abs(shoulderMidY - hipMidY);
-
-    // Check if pose is stable (low movement)
-    const isStable = verticalAlignment < this.stabilityThreshold;
-
-    if (isStable) {
-      if (this.holdState.startTime === null) {
-        this.holdState.startTime = Date.now();
+    const exercise = this.currentExercise.toLowerCase();
+    
+    // Plank-specific detection
+    if (exercise.includes("plank")) {
+      // If timer is already running, only check for knee collapse
+      if (this.holdState.startTime !== null) {
+        // Timer is running - only stop if knees collapse
+        const kneeCollapse = checkKneeCollapse(landmarks);
+        if (kneeCollapse.isCollapsed) {
+          // Knees collapsed - reset timer
+          this.holdState.startTime = null;
+          this.holdState.duration = 0;
+          this.holdState.isStable = false;
+          return;
+        }
+        
+        // Knees still straight - continue timer
+        this.holdState.duration = (Date.now() - this.holdState.startTime) / 1000; // Convert to seconds
+        this.holdState.isStable = true;
+        return;
       }
-      this.holdState.duration = (Date.now() - this.holdState.startTime) / 1000; // Convert to seconds
-      this.holdState.isStable = true;
+      
+      // Timer not started yet - check if all initial conditions are met
+      // Timer starts when: Side View ✅, Initial Setup ✅, Body Line ✅, Knees Straight ✅
+      const initialSetup = checkPlankInitialSetup(landmarks);
+      if (initialSetup.isValid) {
+        // All conditions met - start timer
+        this.holdState.startTime = Date.now();
+        this.holdState.duration = 0;
+        this.holdState.isStable = true;
+      } else {
+        // Conditions not met - don't start timer
+        this.holdState.startTime = null;
+        this.holdState.duration = 0;
+        this.holdState.isStable = false;
+      }
     } else {
-      // Reset if not stable
-      this.holdState.startTime = null;
-      this.holdState.duration = 0;
-      this.holdState.isStable = false;
+      // Generic static hold detection (for wall sit, etc.)
+      // Key points for stability check (shoulders, hips)
+      const LEFT_SHOULDER = 11;
+      const RIGHT_SHOULDER = 12;
+      const LEFT_HIP = 23;
+      const RIGHT_HIP = 24;
+
+      const shoulderMidY = (landmarks[LEFT_SHOULDER].y + landmarks[RIGHT_SHOULDER].y) / 2;
+      const hipMidY = (landmarks[LEFT_HIP].y + landmarks[RIGHT_HIP].y) / 2;
+
+      // Calculate vertical alignment (for plank/wall sit)
+      const verticalAlignment = Math.abs(shoulderMidY - hipMidY);
+
+      // Check if pose is stable (low movement)
+      const isStable = verticalAlignment < this.stabilityThreshold;
+
+      if (isStable) {
+        if (this.holdState.startTime === null) {
+          this.holdState.startTime = Date.now();
+        }
+        this.holdState.duration = (Date.now() - this.holdState.startTime) / 1000; // Convert to seconds
+        this.holdState.isStable = true;
+      } else {
+        // Reset if not stable
+        this.holdState.startTime = null;
+        this.holdState.duration = 0;
+        this.holdState.isStable = false;
+      }
     }
   }
 
@@ -639,6 +679,29 @@ export class CVDetector {
       }
     }
 
+    // Check plank form (side view, body line and initial setup)
+    if (exercise.includes("plank")) {
+      const sideView = checkPlankSideView(landmarks);
+      if (!sideView.isValid) {
+        return false;
+      }
+
+      const setup = checkInitialSetup(landmarks);
+      if (!setup.isValid) {
+        return false;
+      }
+
+      const bodyLine = checkBodyLine(landmarks);
+      if (!bodyLine.isValid) {
+        return false;
+      }
+
+      const breakage = checkPlankBreakage(landmarks);
+      if (breakage.isBroken) {
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -703,6 +766,29 @@ export class CVDetector {
         errors.push("Go deeper!");
       } else if (avgAngle > max) {
         errors.push("Stand up straight");
+      }
+    }
+
+    // Check plank form errors
+    if (exercise.includes("plank")) {
+      const sideView = checkPlankSideView(landmarks);
+      if (!sideView.isValid && sideView.error) {
+        errors.push(sideView.error);
+      }
+
+      const setup = checkInitialSetup(landmarks);
+      if (!setup.isValid && setup.error) {
+        errors.push(setup.error);
+      }
+
+      const bodyLine = checkBodyLine(landmarks);
+      if (!bodyLine.isValid && bodyLine.error) {
+        errors.push(bodyLine.error);
+      }
+
+      const breakage = checkPlankBreakage(landmarks);
+      if (breakage.isBroken && breakage.reason) {
+        errors.push(breakage.reason);
       }
     }
 

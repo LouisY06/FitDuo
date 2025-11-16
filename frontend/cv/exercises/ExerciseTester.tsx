@@ -28,6 +28,10 @@ import {
   checkInitialSetup,
   checkBodyLine as checkPlankBodyLine,
   checkPlankBreakage,
+  checkSideView as checkPlankSideView,
+  checkKneeBend,
+  checkPlankInitialSetup,
+  checkKneeCollapse,
 } from "./plank-params";
 
 type ExerciseType = "push-up" | "squat" | "sit-up" | "plank";
@@ -224,15 +228,23 @@ export function ExerciseTester() {
         };
       }
       case "plank": {
+        const sideView = checkPlankSideView(landmarks);
         const setup = checkInitialSetup(landmarks);
         const bodyLine = checkPlankBodyLine(landmarks);
-        const breakage = checkPlankBreakage(landmarks);
+        const kneeCheck = checkKneeBend(landmarks);
+        const initialSetup = checkPlankInitialSetup(landmarks);
+        const kneeCollapse = checkKneeCollapse(landmarks);
+        const isTimerRunning = result?.holdState.startTime !== null;
         return {
+          "Side View": sideView.isValid ? "✅" : "❌",
           "Initial Setup": setup.isValid ? "✅" : "❌",
           "Body Line": bodyLine.isValid ? "✅" : "❌",
-          "Plank Status": breakage.isBroken ? "❌ Broken" : "✅ Holding",
-          "Deviation": `${bodyLine.deviation.toFixed(2)}°`,
-          ...(breakage.reason && { "Break Reason": breakage.reason }),
+          "Knees Straight": kneeCheck.isBent ? "❌" : "✅",
+          "Plank Status": initialSetup.isValid ? "✅ Ready" : "❌ Not Ready",
+          "Timer Status": isTimerRunning ? (kneeCollapse.isCollapsed ? "❌ Stopped (Knees Collapsed)" : "✅ Running") : "⏸️ Not Started",
+          "Deviation": bodyLine.deviation !== 999 ? `${bodyLine.deviation.toFixed(2)}°` : "N/A",
+          ...(sideView.error && { "Side View Error": sideView.error }),
+          ...(kneeCollapse.isCollapsed && kneeCollapse.reason && { "Knee Collapse": kneeCollapse.reason }),
         };
       }
     }
