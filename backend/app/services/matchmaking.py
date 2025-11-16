@@ -79,7 +79,7 @@ class MatchmakingQueue:
         
         # Delay matching to give WebSocket time to connect and register
         async def delayed_match():
-            await asyncio.sleep(0.5)  # 500ms delay for WebSocket registration
+            await asyncio.sleep(1.5)  # 1.5s delay for WebSocket registration
             await self._try_match_and_notify(player_id, session)
         
         asyncio.create_task(delayed_match())
