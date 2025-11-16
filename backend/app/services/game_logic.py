@@ -270,6 +270,41 @@ async def start_next_round(
 
     # Broadcast updated game state
     await broadcast_game_state(game_session, manager, game_id)
+    
+    # Generate and send form rules for the selected exercise (same as round 1)
+    if exercise_id:
+        exercise = session.get(Exercise, exercise_id)
+        if exercise:
+            from app.services.llm_service import llm_service
+            from datetime import datetime
+            
+            form_rules = await llm_service.generate_form_rules(exercise.name)
+            # Send form rules to all players in the game
+            await manager.broadcast_to_game(
+                {
+                    "type": "FORM_RULES",
+                    "payload": {
+                        "exercise_id": exercise_id,
+                        "exercise_name": exercise.name,
+                        "form_rules": form_rules,
+                    },
+                },
+                game_id,
+            )
+            # Start ready phase with server timestamp for synchronization
+            ready_phase_start_time = datetime.utcnow().timestamp()
+            await manager.broadcast_to_game(
+                {
+                    "type": "READY_PHASE_START",
+                    "payload": {
+                        "startTimestamp": ready_phase_start_time,
+                        "durationSeconds": 10,
+                    },
+                },
+                game_id,
+            )
+            # Reset ready status for both players when exercise is selected
+            manager.reset_player_ready_status(game_id)
 
 
 async def broadcast_game_state(
