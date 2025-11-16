@@ -261,3 +261,55 @@ button:focus-visible {
   }
 }
 
+/* Per-letter intro animation: fade in, slide up, reduce blur */
+@keyframes letterReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.letter-reveal {
+  display: inline-block;
+  opacity: 0;
+  animation-name: letterReveal;
+  animation-duration: 0.8s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+/* Breathing neon glow for GO button */
+@keyframes breatheGlow {
+  0% {
+    transform: scale(1);
+    box-shadow:
+      0 0 20px rgba(99, 255, 0, 0.25),
+      0 0 40px rgba(99, 255, 0, 0.15),
+      0 0 60px rgba(99, 255, 0, 0.1);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow:
+      0 0 28px rgba(99, 255, 0, 0.35),
+      0 0 55px rgba(99, 255, 0, 0.25),
+      0 0 80px rgba(99, 255, 0, 0.15);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 20px rgba(99, 255, 0, 0.25),
+      0 0 40px rgba(99, 255, 0, 0.15),
+      0 0 60px rgba(99, 255, 0, 0.1);
+  }
+}
+
+.breathe-go {
+  animation: breatheGlow 2.2s ease-in-out infinite;
+}
+

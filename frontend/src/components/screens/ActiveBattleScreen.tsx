@@ -1,6 +1,9 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { LiveBattleCard } from "../LiveBattleCard";
+import { AnimatedTitle } from "../AnimatedTitle";
+import { ShimmerButton, ShimmerCard } from "../ShimmerComponents";
+import { ElectricButton } from "../ElectricButton";
 import { CVDetector } from "../../../cv/services/cv-detector";
 import { PUSHUP_FORM_RULES } from "../../../cv/exercises/pushup-params";
 import { SQUAT_FORM_RULES, checkStandingForm } from "../../../cv/exercises/squat-params";
@@ -32,34 +35,36 @@ const EXERCISE_OPTIONS: ExerciseOption[] = [
     id: "push-up",
     name: "Push-ups",
     description: "Classic upper body exercise",
-    icon: "💪",
+    icon: "",
     formRules: PUSHUP_FORM_RULES,
   },
   {
     id: "squat",
     name: "Squats",
     description: "Lower body strength builder",
-    icon: "🦵",
+    icon: "",
     formRules: SQUAT_FORM_RULES,
   },
   {
     id: "plank",
     name: "Plank Hold",
     description: "Core stability challenge",
-    icon: "🏋️",
+    icon: "",
     formRules: PLANK_FORM_RULES,
   },
   {
     id: "lunge",
-    name: "Lunges",
-    description: "Leg strength and balance",
-    icon: "🚶",
+    name: "Sit-ups",
+    description: "Core strength and endurance",
+    icon: "",
     formRules: LUNGE_FORM_RULES,
   },
 ];
 
 export function ActiveBattleScreen() {
   const { gameId } = useParams<{ gameId: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const detectorRef = useRef<CVDetector | null>(null);
@@ -106,6 +111,7 @@ export function ActiveBattleScreen() {
   } | null>(null);
   const [roundEndCountdown, setRoundEndCountdown] = useState(5); // 5 second countdown after round ends
   const [showGameOver, setShowGameOver] = useState(false);
+  const [debugEndState, setDebugEndState] = useState<"victory" | "defeat" | "tie" | null>(null);
   const sendRepIncrementRef = useRef<((repCount: number) => void) | null>(null);
   const sendRoundEndRef = useRef<(() => void) | null>(null);
   const sendExerciseSelectedRef = useRef<((exerciseId: number) => void) | null>(null);
@@ -119,6 +125,17 @@ export function ActiveBattleScreen() {
   // Game state derived values
   const gameStateStr = gameState?.status || "countdown";
   const durationSeconds = 60;
+
+  // Debug helper: allow forcing end-state screens via ?endState=victory|defeat|tie
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const value = params.get("endState");
+    if (value === "victory" || value === "defeat" || value === "tie") {
+      setDebugEndState(value);
+    } else {
+      setDebugEndState(null);
+    }
+  }, [location.search]);
   
   // Get selected exercise form rules
   const getSelectedExerciseRules = (): any => {
@@ -925,73 +942,952 @@ export function ActiveBattleScreen() {
   }, [gameId, selectedExercise]);
 
   // Game Over Screen
-  if (showGameOver && roundEndData) {
-    const userRounds = playerId && gameState?.playerA.id === playerId 
-      ? roundEndData.playerARoundsWon || 0
-      : roundEndData.playerBRoundsWon || 0;
-    const opponentRounds = playerId && gameState?.playerA.id === playerId 
-      ? roundEndData.playerBRoundsWon || 0
-      : roundEndData.playerARoundsWon || 0;
-    const isMatchWinner = userRounds > opponentRounds;
+  if ((showGameOver || debugEndState === "victory" || debugEndState === "defeat") && (roundEndData || debugEndState)) {
+    const effectiveRoundEndData =
+      roundEndData ??
+      ({
+        winnerId: debugEndState === "victory" ? playerId ?? 1 : debugEndState === "defeat" ? null : null,
+        loserId: null,
+        playerAScore: 46,
+        playerBScore: 39,
+        playerARoundsWon: 2,
+        playerBRoundsWon: 1,
+        narrative: "",
+        strategy: {},
+      } as unknown as NonNullable<typeof roundEndData>);
+
+    const userRounds =
+      playerId && gameState?.playerA.id === playerId
+        ? effectiveRoundEndData!.playerARoundsWon || 0
+        : effectiveRoundEndData!.playerBRoundsWon || 0;
+    const opponentRounds =
+      playerId && gameState?.playerA.id === playerId
+        ? effectiveRoundEndData!.playerBRoundsWon || 0
+        : effectiveRoundEndData!.playerARoundsWon || 0;
+
+    let isMatchWinner = userRounds > opponentRounds;
+    if (debugEndState === "victory") isMatchWinner = true;
+    if (debugEndState === "defeat") isMatchWinner = false;
+
+    const isTie = userRounds === opponentRounds && !debugEndState;
+    const isDefeat = !isMatchWinner && !isTie;
+
+    const isPlayerA = playerId && gameState?.playerA.id === playerId;
+    const userScore = isPlayerA
+      ? effectiveRoundEndData!.playerAScore
+      : effectiveRoundEndData!.playerBScore;
+    const opponentScore = isPlayerA
+      ? effectiveRoundEndData!.playerBScore
+      : effectiveRoundEndData!.playerAScore;
+
+    const maskStyle: React.CSSProperties = {
+      WebkitMaskImage:
+        "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)",
+      maskImage:
+        "linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)",
+    };
+
+    const fxFilterStyle: React.CSSProperties = {
+      // Liquid glass filter from FxFilter.js
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore -- CSS custom property not in standard typings
+      "--fx-filter": "blur(4px) liquid-glass(2, 10) saturate(1.25)",
+    };
 
     return (
       <>
-        <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />
-        <main className="relative min-h-screen text-neutral-50 flex items-center justify-center z-10 px-4">
-          <div className="w-full max-w-4xl">
-            <div className="text-center mb-8">
-              <h1 className="text-6xl font-semibold text-lime-400 audiowide-regular mb-6 animate-pulse">
-                🎮 GAME OVER 🎮
-              </h1>
-              
-              {/* Match Result */}
-              <div className="mt-8 mb-6">
-                {isMatchWinner ? (
-                  <div className="inline-flex items-center gap-4 bg-lime-500/20 border-4 border-lime-400 rounded-3xl px-12 py-6">
-                    <span className="text-6xl">🏆</span>
-                    <div className="text-left">
-                      <p className="text-3xl font-semibold text-lime-300">VICTORY!</p>
-                      <p className="text-lg text-lime-400/80">You won the match!</p>
+        <main className="min-h-screen bg-[#050712] text-slate-100 flex items-center justify-center p-4 md:p-8">
+          <div className="relative w-full max-w-5xl mx-auto">
+            {/* Background grid + diagonal accent */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+              <div
+                className={`absolute inset-0 opacity-[0.12] ${
+                  isTie
+                    ? "bg-[radial-gradient(circle_at_top,_#63FF00_0,_transparent_55%),radial-gradient(circle_at_bottom,_#e11d74_0,_transparent_55%)]"
+                    : isDefeat
+                    ? "bg-[radial-gradient(circle_at_top,_#fb7185_0,_transparent_55%),radial-gradient(circle_at_bottom,_#ea580c_0,_transparent_55%)]"
+                    : "bg-[radial-gradient(circle_at_top,_#63FF00_0,_transparent_55%),radial-gradient(circle_at_bottom,_#22d3ee_0,_transparent_55%)]"
+                }`}
+              />
+              <div className="absolute inset-[1px] bg-[linear-gradient(to_right,_rgba(148,163,184,0.18)_1px,_transparent_1px),linear-gradient(to_bottom,_rgba(148,163,184,0.18)_1px,_transparent_1px)] bg-[size:32px_32px] mix-blend-screen opacity-50" />
+              <div className="absolute -top-16 -left-24 w-80 h-80 bg-emerald-400/25 blur-3xl rotate-[-18deg]" />
+              <div className="absolute -bottom-20 -right-24 w-80 h-80 bg-fuchsia-500/25 blur-3xl rotate-[18deg]" />
+            </div>
+
+            {/* Main container panel */}
+            <div
+              className="relative border border-slate-800/80 bg-slate-950/60 rounded-3xl shadow-[0_32px_90px_rgba(0,0,0,0.75)] overflow-hidden"
+              style={{ ...maskStyle, ...fxFilterStyle }}
+            >
+              {/* Top accent bar */}
+              <div
+                className={`h-1 w-full bg-gradient-to-r opacity-80 ${
+                  isTie
+                    ? "from-[#63FF00] via-fuchsia-500 to-sky-400"
+                    : isDefeat
+                    ? "from-[#fb7185] via-[#f97316] to-[#facc15]"
+                    : "from-[#63FF00] via-fuchsia-500 to-sky-400"
+                }`}
+              />
+
+              <div className="px-4 sm:px-6 md:px-8 lg:px-10 py-5 md:py-6 lg:py-8 space-y-6 md:space-y-8">
+                {/* Header / hero */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
+                  <div className="space-y-1.5">
+                    <div
+                      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border shadow-[0_0_25px_rgba(99,255,0,0.35)] ${
+                        isTie
+                          ? "border-[#63FF00]/60 bg-slate-900/80"
+                          : isDefeat
+                          ? "border-[#fb7185]/70 bg-[#fb7185]/10 shadow-[0_0_25px_rgba(251,113,133,0.55)]"
+                          : "border-emerald-400/40 bg-emerald-500/10"
+                      }`}
+                    >
+                      <span
+                        className={`inline-flex h-2 w-2 rounded-full shadow-[0_0_12px_rgba(99,255,0,0.9)] ${
+                          isTie
+                            ? "bg-[#63FF00] shadow-[0_0_16px_rgba(236,72,153,0.9)]"
+                            : isDefeat
+                            ? "bg-[#fb7185] shadow-[0_0_12px_rgba(251,113,133,0.95)]"
+                            : "bg-[#63FF00]"
+                        }`}
+                      />
+                      <span className="text-[11px] uppercase tracking-[0.22em] text-emerald-300/90 font-medium">
+                        Ranked Match Result
+                      </span>
+                    </div>
+
+                    <div className="flex items-end gap-3">
+                      <h1
+                        className={`text-3xl sm:text-4xl md:text-[40px] leading-tight tracking-tight audiowide-regular ${
+                          isTie
+                            ? "bg-gradient-to-r from-[#63FF00] via-fuchsia-400 to-sky-400 text-transparent bg-clip-text drop-shadow-[0_0_28px_rgba(236,72,153,0.85)]"
+                            : isDefeat
+                            ? "text-[#fb7185] drop-shadow-[0_0_18px_rgba(251,113,133,0.75)]"
+                            : "text-[#63FF00] drop-shadow-[0_0_18px_rgba(99,255,0,0.65)]"
+                        }`}
+                      >
+                        {isTie ? "MATCH TIED" : isMatchWinner ? "VICTORY" : "DEFEAT"}
+                      </h1>
+                      <span className="text-xs sm:text-sm uppercase tracking-[0.24em] text-slate-400">
+                        {isTie
+                          ? "Too close to call"
+                          : isMatchWinner
+                          ? "You outpaced your rival"
+                          : "Your rival edged ahead this time"}
+                      </span>
+                    </div>
+
+                    <p className="text-sm sm:text-[13px] text-slate-300/85 max-w-xl">
+                      {isTie
+                        ? "Neither side gave an inch—tempo and rep pacing were nearly identical. This one could've gone either way."
+                        : isMatchWinner
+                        ? "You won the match! Your tempo spikes carried the win—lock in that pacing to climb the ladder."
+                        : "Tough loss, but your pacing shows real potential—tune the final stretch and you’ll start converting these into wins."}
+                    </p>
+                  </div>
+
+                  {/* Mini match badge (no season/tier for now) */}
+                  <div className="flex items-center gap-4 md:gap-5">
+                    <div className="hidden sm:flex flex-col items-end gap-1 text-[11px] text-slate-400 uppercase tracking-[0.24em]">
+                      <span className="text-slate-400/80">FitDuo</span>
+                      <span className="text-slate-500/80">VS BATTLE</span>
                     </div>
                   </div>
-                ) : (
-                  <div className="inline-flex items-center gap-4 bg-red-500/20 border-4 border-red-400 rounded-3xl px-12 py-6">
-                    <span className="text-6xl">😔</span>
-                    <div className="text-left">
-                      <p className="text-3xl font-semibold text-red-300">DEFEAT</p>
-                      <p className="text-lg text-red-400/80">Better luck next time!</p>
+                </div>
+
+                {/* Divider */}
+                <div className="h-px bg-gradient-to-r from-slate-900 via-slate-700/70 to-slate-900" />
+
+                {/* Score Summary */}
+                <section className="grid md:grid-cols-[1.15fr_1fr] gap-5 md:gap-6 items-stretch">
+                  {/* Score: You vs Opponent */}
+                  <div className="relative border border-slate-800/90 rounded-2xl bg-slate-950/70 px-4 sm:px-5 py-4 sm:py-5 overflow-hidden">
+                    <div className="pointer-events-none absolute -top-24 right-[-40%] w-80 h-80 bg-gradient-to-br from-emerald-500/25 via-emerald-500/5 to-transparent opacity-60 rotate-[-16deg]" />
+
+                    <div className="flex items-center justify-between gap-4 mb-4 sm:mb-5">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[11px] uppercase tracking-[0.26em] text-slate-400">
+                          Final score
+                    </span>
+                        <div className="flex items-end gap-2">
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-3xl sm:text-[32px] tracking-tight text-slate-50 audiowide-regular">
+                              {userRounds}
+                            </span>
+                            <span className="text-lg text-slate-500 font-medium">
+                              –
+                            </span>
+                            <span className="text-3xl sm:text-[32px] tracking-tight text-slate-400 audiowide-regular">
+                              {opponentRounds}
+                            </span>
+                    </div>
+                          <span className="text-[11px] uppercase tracking-[0.26em] text-emerald-300/90 bg-emerald-500/10 border border-emerald-500/40 rounded-full px-2 py-0.5">
+                            {isTie ? "Perfect Balance" : "Best of 3"}
+                          </span>
+                  </div>
+              </div>
+
+                      {/* Round chips - static 3-round layout */}
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-full border border-emerald-400/50 bg-emerald-500/10">
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-slate-300">
+                              R1
+                            </span>
+                            <span className="text-[10px] font-medium text-emerald-300">
+                              {userRounds >= 1 ? "W" : "L"}
+                            </span>
+                </div>
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-full border border-emerald-400/50 bg-emerald-500/10">
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-slate-300">
+                              R2
+                            </span>
+                            <span className="text-[10px] font-medium text-emerald-300">
+                              {userRounds >= 2 ? "W" : "L"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-full border border-fuchsia-500/60 bg-fuchsia-500/10">
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-slate-300">
+                              R3
+                            </span>
+                            <span className="text-[10px] font-medium text-fuchsia-300">
+                              {userRounds === opponentRounds ? "—" : userRounds > opponentRounds ? "W" : "L"}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-slate-400 text-right max-w-[180px]">
+                          Best-of-three match closed out at {userRounds}
+                          –{opponentRounds}.{" "}
+                          {isTie
+                            ? "Pacing symmetry stayed locked in from start to finish."
+                            : isMatchWinner
+                            ? "Your early rounds created the gap."
+                            : "A late surge from your rival decided it."}
+                        </p>
+                </div>
+              </div>
+
+                    {/* You vs Opponent rows */}
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      <div className="relative rounded-xl border border-emerald-500/50 bg-emerald-500/8 px-3 py-2.5 flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] uppercase tracking-[0.26em] text-slate-300">
+                            You
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/50 text-emerald-200 uppercase tracking-[0.18em]">
+                            {isTie ? "Tied" : isMatchWinner ? "Winner" : "Fighter"}
+                          </span>
+                </div>
+                        <div className="flex items-end justify-between">
+                          <div className="flex flex-col">
+                            <span className="text-xs text-slate-400">
+                              Rounds Won
+                            </span>
+                            <span className="text-sm text-emerald-300 font-medium">
+                              {userRounds} / 3
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-3.5 h-3.5 text-emerald-300"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            >
+                              <path
+                                d="M7 17L17 7"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M8 7H17V16"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <span>
+                              {isTie
+                                ? "MMR Stable"
+                                : isMatchWinner
+                                ? "+MMR Gain"
+                                : "MMR Stable"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="relative rounded-xl border border-slate-700/90 bg-slate-900/80 px-3 py-2.5 flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] uppercase tracking-[0.26em] text-slate-400">
+                            Opponent
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900/80 border border-slate-700 text-slate-400 uppercase tracking-[0.18em]">
+                            Rival
+                          </span>
+                        </div>
+                        <div className="flex items-end justify-between">
+                          <div className="flex flex-col">
+                            <span className="text-xs text-slate-500">
+                              Rounds Won
+                            </span>
+                            <span className="text-sm text-fuchsia-300 font-medium">
+                              {opponentRounds} / 3
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-3.5 h-3.5 text-fuchsia-300"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            >
+                              <path
+                                d="M7 7L17 17"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M17 8V17H8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <span>
+                              {isTie
+                                ? "MMR Stable"
+                                : isMatchWinner
+                                ? "MMR Loss"
+                                : "+MMR Gain"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Final Score */}
-              <div className="grid grid-cols-2 gap-6 max-w-md mx-auto mb-6">
-                <div className={`border-2 rounded-xl p-6 ${isMatchWinner ? 'bg-lime-500/10 border-lime-400' : 'bg-[#020511]/80 border-slate-600'}`}>
-                  <p className="text-xs uppercase tracking-wider text-slate-400 mb-2">Your Rounds Won</p>
-                  <p className="text-5xl font-semibold text-lime-400">{userRounds}</p>
-                </div>
-                <div className={`border-2 rounded-xl p-6 ${!isMatchWinner ? 'bg-red-500/10 border-red-400' : 'bg-[#020511]/80 border-slate-600'}`}>
-                  <p className="text-xs uppercase tracking-wider text-slate-400 mb-2">Opponent Rounds Won</p>
-                  <p className="text-5xl font-semibold text-sky-400">{opponentRounds}</p>
-                </div>
-              </div>
+                  {/* Key stats panel */}
+                  <div className="relative border border-slate-800/90 rounded-2xl bg-slate-950/70 px-4 sm:px-5 py-4 sm:py-5 flex flex-col gap-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#63FF00] shadow-[0_0_10px_rgba(99,255,0,0.9)]" />
+                        <h2 className="text-xs uppercase tracking-[0.26em] text-slate-300">
+                          Performance Snapshot
+                        </h2>
+                      </div>
+                      <span className="text-[11px] text-slate-500">
+                        1-min Battle
+                      </span>
+                    </div>
 
-              {/* Narrative */}
-              {roundEndData.narrative && (
-                <div className="max-w-2xl mx-auto bg-[#020511]/60 border border-slate-700 rounded-xl p-6 mb-6">
-                  <p className="text-sm text-slate-300 italic">{roundEndData.narrative}</p>
-                </div>
-              )}
+                    <div className="space-y-3.5">
+                      {/* Total Reps */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-xl border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-4 h-4 text-emerald-300"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            >
+                              <polyline
+                                points="22 12 18 12 15 21 9 3 6 12 2 12"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                              Total Reps (Last Round)
+                            </span>
+                            <span className="text-xs text-slate-300">
+                              Overall volume in the final round.
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-baseline gap-3 text-right">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-emerald-300/90 uppercase tracking-[0.18em]">
+                              You
+                            </span>
+                            <span className="text-sm text-emerald-200 font-medium">
+                              {userScore}
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-fuchsia-300/90 uppercase tracking-[0.18em]">
+                              Rival
+                            </span>
+                            <span className="text-sm text-fuchsia-200 font-medium">
+                              {opponentScore}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
 
-              {/* Action Button */}
-              <div className="mt-8">
-                <button
-                  onClick={() => window.location.href = '/app/battle'}
-                  className="px-8 py-4 bg-lime-500 hover:bg-lime-600 text-black font-semibold rounded-xl text-lg transition-colors"
-                >
-                  Return to Matchmaking
-                </button>
+                      {/* Best Round Reps */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-xl border border-sky-500/40 bg-sky-500/10 flex items-center justify-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-4 h-4 text-sky-300"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            >
+                              <path
+                                d="M12 3C12.5 5 14 6.5 15 8.5C16 10.5 16.5 13 15 15.5C14 17.25 12.75 18 12 18C11.25 18 10 17.25 9 15.5C7.5 13 8 10.5 9 8.5C10 6.5 11.5 5 12 3Z"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M10.5 14C11 14.75 11.5 15 12 15C12.5 15 13 14.75 13.5 14"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                              Best Round Reps
+                            </span>
+                            <span className="text-xs text-slate-300">
+                              Peak output snapshot (this round).
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-baseline gap-3 text-right">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-emerald-300/90 uppercase tracking-[0.18em]">
+                              You
+                            </span>
+                            <span className="text-sm text-emerald-200 font-medium">
+                              {userScore}
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-fuchsia-300/90 uppercase tracking-[0.18em]">
+                              Rival
+                            </span>
+                            <span className="text-sm text-fuchsia-200 font-medium">
+                              {opponentScore}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Consistency Score - placeholder for now */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-xl border border-slate-600/70 bg-slate-900/80 flex items-center justify-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-4 h-4 text-slate-200"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            >
+                              <path
+                                d="M3 3v18h18"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M19 9l-4 4-3-3-4 4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                              Consistency Score
+                            </span>
+                            <span className="text-xs text-slate-300">
+                              Steady cadence through most of the round.
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-baseline gap-3 text-right">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-emerald-300/90 uppercase tracking-[0.18em]">
+                              You
+                            </span>
+                            <span className="text-sm text-emerald-200 font-medium">
+                              88
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-fuchsia-300/90 uppercase tracking-[0.18em]">
+                              Rival
+                            </span>
+                            <span className="text-sm text-fuchsia-200 font-medium">
+                              81
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tiny legend */}
+                    <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-800/80 mt-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="h-1.5 w-3 rounded-full bg-emerald-400" />
+                          <span className="text-[11px] text-slate-400">You</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="h-1.5 w-3 rounded-full bg-fuchsia-400" />
+                          <span className="text-[11px] text-slate-400">
+                            Opponent
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-slate-500 uppercase tracking-[0.22em]">
+                        Live telemetry
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Coaching insight + CTA stack */}
+                <section className="grid md:grid-cols-[1.2fr_1fr] gap-5 md:gap-6">
+                  <div className="relative border border-slate-800/90 rounded-2xl bg-slate-950/80 px-4 sm:px-5 py-4 sm:py-5">
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <div className="h-7 w-7 rounded-full border border-emerald-400/50 bg-emerald-500/10 flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-3.5 h-3.5 text-emerald-300"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                        >
+                          <path
+                            d="M12 8V4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <rect x="7" y="8" width="10" height="9" rx="2" ry="2" />
+                          <path
+                            d="M5 11H3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M21 11h-2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle cx="9" cy="12" r="1" />
+                          <circle cx="15" cy="12" r="1" />
+                          <path
+                            d="M8 17c.6.6 1.5 1 2.5 1h3c1 0 1.9-.4 2.5-1"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-xs uppercase tracking-[0.26em] text-slate-300">
+                          Coaching Insight
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Powered by FitDuo Pace Engine
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-slate-200 leading-relaxed">
+                      {effectiveRoundEndData.narrative
+                        ? effectiveRoundEndData.narrative
+                        : isTie
+                        ? "Neither side gave an inch—your cadence, tempo, and rep quality tracked almost perfectly. Lean into micro-pacing drills to find the tiny edge that turns stalemates into streaks."
+                        : isMatchWinner
+                        ? "You surged ahead mid-match with faster, cleaner reps. Your pacing only dipped slightly in the final seconds—lock in that finish and you’ll snowball future matches."
+                        : "Your rival found momentum late in the match. Stabilize your cadence earlier and protect your pacing in the final 15 seconds to flip these close losses into wins."}
+                    </p>
+
+                    <div className="mt-3.5 flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-3.5 h-3.5 text-slate-400"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                        >
+                          <circle cx="12" cy="13" r="6" />
+                          <path
+                            d="M12 10v3l1.5 1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M9 4h6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <span>Focus next: end-game endurance</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[11px] text-emerald-300">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-3.5 h-3.5 text-emerald-300"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                        >
+                          <circle cx="12" cy="12" r="7" />
+                          <path
+                            d="M3 12h3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M18 12h3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M12 3v3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M12 18v3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <span>Suggested: 2× tempo drills</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CTA stack */}
+                  <div className="flex flex-col gap-3 sm:gap-4 justify-between">
+                    {/* Primary CTA */}
+                    <button
+                      className="relative group w-full inline-flex items-center justify-center px-4 py-3.5 rounded-2xl overflow-hidden bg-[radial-gradient(circle_at_0%_0%,rgba(99,255,0,0.35),transparent_60%),linear-gradient(to_right,#63FF00,#22c55e,#a855f7)] shadow-[0_0_35px_rgba(99,255,0,0.4)] border border-emerald-400/70 hover:border-emerald-300 transition-all duration-300"
+                      onClick={() => {
+                        try {
+                          localStorage.setItem("app_initial_tab", "battle");
+                        } catch {
+                          // ignore storage errors
+                        }
+                        navigate("/app", { state: { autoMatchmaking: true } });
+                      }}
+                    >
+                      <span className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-gradient-to-r from-transparent via-white/35 to-transparent opacity-60 group-hover:translate-x-[120%] transition-transform duration-700 ease-out" />
+                      <span className="relative flex items-center gap-2 text-[13px] uppercase tracking-[0.26em] text-slate-950 font-medium">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-4 h-4 text-slate-950"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                        >
+                          <circle cx="12" cy="12" r="9" />
+                          <path
+                            d="M2 12h2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M12 2v2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M20 12h2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M12 20v2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M12 12l4-4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                    Return to Matchmaking
+                  </span>
+                      <span className="absolute inset-0 rounded-2xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                    </button>
+
+                    {/* Secondary CTAs */}
+                    <div className="relative border border-slate-800/90 rounded-2xl bg-slate-950/80 px-4 sm:px-5 py-3.5 sm:py-4">
+                      <div className="flex items-center justify-between mb-3 gap-2">
+                        <h4 className="text-[11px] uppercase tracking-[0.26em] text-slate-300">
+                          Aftermatch Actions
+                        </h4>
+                        <span className="text-[11px] text-slate-500">
+                          Choose your next move
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col gap-2.5 text-[13px]">
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-slate-200 bg-slate-900/60 border border-slate-700/80 hover:border-emerald-400/60 hover:bg-slate-900 transition-colors group"
+                          onClick={() => navigate("/history")}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-300"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            >
+                              <path
+                                d="M3 3v18h18"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <rect
+                                x="7"
+                                y="10"
+                                width="2"
+                                height="5"
+                                rx="0.5"
+                              />
+                              <rect
+                                x="11"
+                                y="8"
+                                width="2"
+                                height="7"
+                                rx="0.5"
+                              />
+                              <rect
+                                x="15"
+                                y="6"
+                                width="2"
+                                height="9"
+                                rx="0.5"
+                              />
+                            </svg>
+                            <span>View match stats</span>
+                          </span>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-3 h-3 text-slate-500 group-hover:text-emerald-300"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                          >
+                            <path
+                              d="M9 18l6-6-6-6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-slate-300 bg-slate-950/60 border border-slate-700/80 hover:border-fuchsia-400/70 hover:bg-slate-900 transition-colors group"
+                          onClick={() => navigate("/discover")}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-3.5 h-3.5 text-slate-400 group-hover:text-fuchsia-300"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            >
+                              <rect
+                                x="3"
+                                y="9"
+                                width="3"
+                                height="6"
+                                rx="0.5"
+                              />
+                              <rect
+                                x="18"
+                                y="9"
+                                width="3"
+                                height="6"
+                                rx="0.5"
+                              />
+                              <rect
+                                x="8"
+                                y="10"
+                                width="8"
+                                height="4"
+                                rx="0.5"
+                              />
+                            </svg>
+                            <span>Change exercise</span>
+                          </span>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-3 h-3 text-slate-500 group-hover:text-fuchsia-300"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                          >
+                            <path
+                              d="M9 18l6-6-6-6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-slate-300 bg-slate-950/40 border border-slate-700/70 hover:border-sky-400/80 hover:bg-slate-900/80 transition-colors group"
+                          onClick={() => {
+                            try {
+                              localStorage.setItem("app_initial_tab", "workout");
+                            } catch {
+                              // ignore storage errors
+                            }
+                            navigate("/app");
+                          }}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-300"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            >
+                              <circle cx="14" cy="5" r="1.75" />
+                              <path
+                                d="M9 20l2-5 2.5-2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M11 11l1.5-2.5 3 1.5 2.5 2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M6 12l3 1"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <span>Practice solo</span>
+                          </span>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-3 h-3 text-slate-500 group-hover:text-sky-300"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                          >
+                            <path
+                              d="M9 18l6-6-6-6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Footer metadata bar */}
+                <footer className="mt-1 border-t border-slate-800/90 pt-3 sm:pt-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-slate-400">
+                      <div className="inline-flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        <span className="uppercase tracking-[0.22em] text-slate-300/90">
+                          Exercise
+                        </span>
+                        <span className="text-slate-400/90">
+                          1-min Battle
+                        </span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-400" />
+                        <span className="uppercase tracking-[0.22em] text-slate-300/90">
+                          Mode
+                        </span>
+                        <span className="text-slate-400/90">Ranked Duo</span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-3 h-3 text-slate-500"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                        >
+                          <path
+                            d="M5 9h14"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M5 15h14"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M11 4L9 20"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <path
+                            d="M15 4l-2 16"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <span className="uppercase tracking-[0.22em] text-slate-300/90">
+                          Match
+                        </span>
+                        <span className="text-slate-500/90">
+                          Best of 3 • {userRounds}-{opponentRounds}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-3 text-[11px] text-slate-500">
+                      <span>Finished • Live session</span>
+                      <span className="hidden sm:inline-block h-3 w-px bg-slate-700/80" />
+                      <span className="uppercase tracking-[0.22em] text-slate-500/90">
+                        FitDuo Arena
+                      </span>
+                    </div>
+                  </div>
+                </footer>
               </div>
             </div>
           </div>
@@ -1001,21 +1897,38 @@ export function ActiveBattleScreen() {
   }
 
   // Round End Screen
-  if (showRoundEnd && roundEndData) {
-    const isWinner = playerId && roundEndData.winnerId === playerId;
-    const isTie = roundEndData.winnerId === null;
-    const userScore = playerId && gameState?.playerA.id === playerId 
-      ? roundEndData.playerAScore 
-      : roundEndData.playerBScore;
-    const opponentScore = playerId && gameState?.playerA.id === playerId 
-      ? roundEndData.playerBScore 
-      : roundEndData.playerAScore;
-    const userRoundsWon = playerId && gameState?.playerA.id === playerId 
-      ? roundEndData.playerARoundsWon || 0
-      : roundEndData.playerBRoundsWon || 0;
-    const opponentRoundsWon = playerId && gameState?.playerA.id === playerId 
-      ? roundEndData.playerBRoundsWon || 0
-      : roundEndData.playerARoundsWon || 0;
+  if ((showRoundEnd || debugEndState === "tie") && (roundEndData || debugEndState === "tie")) {
+    const effectiveRoundEndData =
+      roundEndData ??
+      ({
+        winnerId: null,
+        loserId: null,
+        playerAScore: 40,
+        playerBScore: 40,
+        playerARoundsWon: 1,
+        playerBRoundsWon: 1,
+        narrative: "",
+        strategy: {},
+      } as unknown as NonNullable<typeof roundEndData>);
+
+    const isWinner = playerId && effectiveRoundEndData!.winnerId === playerId;
+    const isTie = debugEndState === "tie" ? true : effectiveRoundEndData!.winnerId === null;
+    const userScore =
+      playerId && gameState?.playerA.id === playerId
+        ? effectiveRoundEndData!.playerAScore
+        : effectiveRoundEndData!.playerBScore;
+    const opponentScore =
+      playerId && gameState?.playerA.id === playerId
+        ? effectiveRoundEndData!.playerBScore
+        : effectiveRoundEndData!.playerAScore;
+    const userRoundsWon =
+      playerId && gameState?.playerA.id === playerId
+        ? effectiveRoundEndData!.playerARoundsWon || 0
+        : effectiveRoundEndData!.playerBRoundsWon || 0;
+    const opponentRoundsWon =
+      playerId && gameState?.playerA.id === playerId
+        ? effectiveRoundEndData!.playerBRoundsWon || 0
+        : effectiveRoundEndData!.playerARoundsWon || 0;
 
     return (
       <>
@@ -1027,24 +1940,47 @@ export function ActiveBattleScreen() {
                 Round {currentRound} Complete
               </h1>
               
-              {/* Winner/Loser/Tie Display */}
-              <div className="mt-8 mb-6">
-                {isTie ? (
-                  <div className="inline-flex items-center gap-3 bg-slate-700/50 border-2 border-slate-500 rounded-2xl px-8 py-4">
-                    <span className="text-4xl">🤝</span>
-                    <span className="text-2xl font-semibold text-slate-300">It's a Tie!</span>
+              {/* Winner/Loser/Tie Display with shimmer card */}
+              <div className="mt-8 mb-6 flex justify-center">
+                <ShimmerCard
+                  variant={isTie ? "primary" : isWinner ? "success" : "secondary"}
+                  className="max-w-xl ai-stagger-card"
+                >
+                  <div className="flex items-center justify-center gap-4">
+                    {isTie ? (
+                      <div className="inline-flex h-10 w-10 rounded-full bg-gradient-to-br from-slate-300 to-slate-500 shadow-[0_0_24px_rgba(148,163,184,0.8)] items-center justify-center">
+                        <span className="audiowide-regular text-xs text-slate-900">
+                          =
+                        </span>
+                      </div>
+                    ) : isWinner ? (
+                      <div className="inline-flex h-10 w-10 rounded-full bg-gradient-to-br from-lime-300 to-emerald-500 shadow-[0_0_24px_rgba(132,255,78,0.9)] items-center justify-center">
+                        <span className="audiowide-regular text-xs text-black">
+                          W
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="inline-flex h-10 w-10 rounded-full bg-gradient-to-br from-rose-400 to-fuchsia-500 shadow-[0_0_24px_rgba(244,63,94,0.9)] items-center justify-center">
+                        <span className="audiowide-regular text-xs text-black">
+                          L
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="text-left">
+                      <p className="text-2xl font-semibold audiowide-regular text-slate-100">
+                        {isTie
+                          ? "It’s a Tie!"
+                          : isWinner
+                          ? "You Won This Round!"
+                          : "You Lost This Round"}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        First to 2 rounds wins the match. Keep your pace and form dialed in.
+                      </p>
+                    </div>
                   </div>
-                ) : isWinner ? (
-                  <div className="inline-flex items-center gap-3 bg-lime-500/20 border-2 border-lime-400 rounded-2xl px-8 py-4">
-                    <span className="text-4xl">🏆</span>
-                    <span className="text-2xl font-semibold text-lime-300">You Won This Round!</span>
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center gap-3 bg-red-500/20 border-2 border-red-400 rounded-2xl px-8 py-4">
-                    <span className="text-4xl">😔</span>
-                    <span className="text-2xl font-semibold text-red-300">You Lost This Round</span>
-                  </div>
-                )}
+                </ShimmerCard>
               </div>
 
               {/* Scores */}
@@ -1059,34 +1995,52 @@ export function ActiveBattleScreen() {
                 </div>
               </div>
 
-              {/* Round Wins */}
+              {/* Round Wins with shimmer pill */}
               <div className="mb-6">
                 <p className="text-sm text-slate-400 mb-2">Match Score (Best of 3 Rounds)</p>
-                <div className="inline-flex items-center gap-4 bg-slate-700/30 border border-slate-600 rounded-xl px-6 py-3">
-                  <span className="text-lime-300 font-semibold">You: {userRoundsWon}</span>
+                <div className="inline-flex items-center gap-4 rounded-xl px-6 py-3 bg-gradient-to-r from-lime-400/15 via-fuchsia-500/10 to-sky-400/15 border border-slate-600">
+                  <span className="text-lime-300 font-semibold">
+                    You: {userRoundsWon}
+                  </span>
                   <span className="text-slate-500">-</span>
-                  <span className="text-sky-300 font-semibold">Opponent: {opponentRoundsWon}</span>
+                  <span className="text-sky-300 font-semibold">
+                    Opponent: {opponentRoundsWon}
+                  </span>
                 </div>
               </div>
 
               {/* Narrative */}
-              {roundEndData.narrative && (
+              {effectiveRoundEndData.narrative && (
                 <div className="max-w-2xl mx-auto bg-[#020511]/60 border border-slate-700 rounded-xl p-6 mb-6">
-                  <p className="text-sm text-slate-300 italic">{roundEndData.narrative}</p>
+                  <p className="text-sm text-slate-300 italic">
+                    {effectiveRoundEndData.narrative}
+                  </p>
                 </div>
               )}
 
-              {/* Next Round Info with Countdown */}
+              {/* Next Round Info with ElectricButton-style CTA */}
               {currentRound < 3 && (
-                <div className="mt-6">
+                <div className="mt-6 flex flex-col items-center gap-3">
                   <div className="inline-flex items-center gap-3 bg-slate-700/30 border border-slate-600 rounded-xl px-6 py-3">
-                    <span className="text-2xl">{roundEndCountdown}</span>
+                    <span className="text-2xl audiowide-regular text-lime-300">
+                      {roundEndCountdown}
+                    </span>
                     <p className="text-slate-400">
-                      {roundEndData.loserId === playerId 
-                        ? "Get ready to choose the next exercise..."
-                        : "Waiting for opponent to choose next exercise..."}
+                      {effectiveRoundEndData.loserId === playerId
+                        ? "You’ll choose the next exercise."
+                        : "Waiting for your rival to choose the next exercise."}
                     </p>
                   </div>
+
+                  <ElectricButton
+                    className="mt-1"
+                    onClick={() => {
+                      // No-op for now – server controls the actual transition.
+                      // We keep this as a visual "Next Round" affordance.
+                    }}
+                  >
+                    Next Round
+                  </ElectricButton>
                 </div>
               )}
             </div>
@@ -1110,8 +2064,11 @@ export function ActiveBattleScreen() {
         <main className="relative min-h-screen text-neutral-50 flex items-center justify-center z-10 px-4">
           <div className="w-full max-w-4xl text-center">
             <div className="mb-8">
-              <h1 className="text-5xl font-semibold text-lime-400 audiowide-regular mb-4">
-                🪙 Coin Flip
+              <h1 className="text-5xl font-semibold text-lime-400 audiowide-regular mb-4 flex items-center justify-center gap-3">
+                <span className="inline-flex h-10 w-10 rounded-full bg-gradient-to-br from-lime-300 via-emerald-400 to-fuchsia-500 shadow-[0_0_30px_rgba(132,255,78,0.8)] items-center justify-center text-xs tracking-[0.2em] uppercase text-black">
+                  FLIP
+                </span>
+                <span>Coin Flip</span>
               </h1>
               <p className="text-lg text-slate-300 mb-8">
                 Determining who chooses the exercise first...
@@ -1120,8 +2077,12 @@ export function ActiveBattleScreen() {
               {/* Animated coin */}
               <div className="flex justify-center mb-8">
                 <div className="relative w-32 h-32">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-[0_0_40px_rgba(250,204,21,0.6)] animate-spin" style={{ animationDuration: '1s' }} />
-                  <div className="absolute inset-2 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-400" />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-lime-400 via-emerald-500 to-fuchsia-500 shadow-[0_0_40px_rgba(132,255,78,0.7)] animate-spin" style={{ animationDuration: "1s" }} />
+                  <div className="absolute inset-2 rounded-full bg-[#020617] border border-lime-300/60 flex items-center justify-center">
+                    <span className="audiowide-regular text-sm tracking-[0.18em] text-lime-300">
+                      VS
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1129,12 +2090,18 @@ export function ActiveBattleScreen() {
               <div className="mt-8">
                 {isWinner ? (
                   <div className="inline-flex items-center gap-3 bg-lime-500/20 border-2 border-lime-400 rounded-2xl px-8 py-4">
-                    <span className="text-3xl">🎉</span>
+                    <span className="inline-flex h-9 w-9 rounded-full bg-gradient-to-br from-lime-300 to-emerald-500 shadow-[0_0_24px_rgba(132,255,78,0.9)] items-center justify-center">
+                      <span className="audiowide-regular text-xs text-black">YOU</span>
+                    </span>
                     <span className="text-2xl font-semibold text-lime-300">You Choose First!</span>
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-3 bg-slate-700/50 border-2 border-slate-500 rounded-2xl px-8 py-4">
-                    <span className="text-3xl">👤</span>
+                    <span className="inline-flex h-9 w-9 rounded-full bg-gradient-to-br from-sky-400 to-fuchsia-500 shadow-[0_0_24px_rgba(56,189,248,0.8)] items-center justify-center">
+                      <span className="audiowide-regular text-[10px] text-black">
+                        RIVAL
+                      </span>
+                    </span>
                     <span className="text-2xl font-semibold text-slate-300">
                       {winnerName} Chooses First
                     </span>
@@ -1150,10 +2117,10 @@ export function ActiveBattleScreen() {
 
   // Exercise Selection Screen (only show if it's this player's turn)
   if (showExerciseSelection && !selectedExercise && whoseTurnToChoose === playerId) {
-    // Show the NEXT round number during selection (we're selecting FOR the next round)
-    // If we've completed any rounds (not first selection), show currentRound + 1
-    const hasCompletedRounds = userRoundsWon + opponentRoundsWon > 0 || roundEndData !== null;
-    const displayRound = hasCompletedRounds ? currentRound + 1 : currentRound;
+    // Always trust server-provided currentRound to avoid desync between players.
+    // The backend sends ROUND_START with the round number; when selecting, we
+    // simply display currentRound rather than trying to predict "next" locally.
+    const displayRound = currentRound;
     return (
       <>
         <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />
@@ -1178,7 +2145,71 @@ export function ActiveBattleScreen() {
                   onClick={() => handleExerciseSelect(exercise.id)}
                   className="group relative rounded-2xl border-2 border-lime-400/30 bg-[#020511]/80 backdrop-blur-sm p-6 hover:border-lime-400/60 hover:bg-[#020511] transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(132,255,78,0.3)]"
                 >
-                  <div className="text-5xl mb-3">{exercise.icon}</div>
+                  <div className="mb-3 flex items-center justify-center">
+                    {exercise.id === "push-up" && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        className="h-10 w-10 text-lime-300"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="11" width="18" height="3" rx="1" />
+                        <path d="M7 14v3" />
+                        <path d="M17 14v3" />
+                      </svg>
+                    )}
+                    {exercise.id === "squat" && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        className="h-10 w-10 text-lime-300"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="5" r="2" />
+                        <path d="M9 22l1.5-5.5L8 11l4-2 4 2-2.5 5.5L15 22" />
+                      </svg>
+                    )}
+                    {exercise.id === "plank" && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        className="h-10 w-10 text-lime-300"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 14h18l-1 3H4z" />
+                        <path d="M6 11l4-2 4 1 4 2" />
+                      </svg>
+                    )}
+                    {exercise.id === "lunge" && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        className="h-10 w-10 text-lime-300"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="10" cy="5" r="2" />
+                        <path d="M8 22v-4l2-3 3-1" />
+                        <path d="M14 22v-5l-2-3" />
+                        <path d="M7 10l3-1 3 1" />
+                      </svg>
+                    )}
+                  </div>
                   <h3 className="text-lg font-semibold text-lime-300 mb-1 audiowide-regular">
                     {exercise.name}
                   </h3>
@@ -1204,10 +2235,8 @@ export function ActiveBattleScreen() {
 
   // Waiting for opponent to choose exercise (only show if exercise not yet selected)
   if (showExerciseSelection && !selectedExercise && whoseTurnToChoose !== playerId && whoseTurnToChoose !== null) {
-    // Show the NEXT round number during selection (we're waiting for the next round)
-    // If we've completed any rounds (not first selection), show currentRound + 1
-    const hasCompletedRounds = userRoundsWon + opponentRoundsWon > 0 || roundEndData !== null;
-    const displayRound = hasCompletedRounds ? currentRound + 1 : currentRound;
+    // Same reasoning as above: rely on server currentRound to keep clients in sync.
+    const displayRound = currentRound;
     return (
       <>
         <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />
@@ -1246,14 +2275,17 @@ export function ActiveBattleScreen() {
       <main className="relative min-h-[calc(100vh-120px)] text-neutral-50 flex z-10">
         <div className="flex-1 flex items-center justify-center px-4 pt-8 pb-24">
           <div className="w-full max-w-4xl space-y-8">
-            {/* Round Indicator */}
+            {/* Round Indicator with per-letter intro animation */}
             <div className="text-center mb-4">
               <div className="inline-flex items-center gap-2 bg-lime-400/10 border border-lime-400/30 rounded-full px-4 py-2 text-sm text-lime-300">
-                <span>Round {currentRound} of 3</span>
+                <AnimatedTitle text={`Round ${currentRound} of 3`} />
                 {selectedExercise && (
                   <>
                     <span className="text-lime-400/50">•</span>
-                    <span className="capitalize">{selectedExercise.replace("-", " ")}</span>
+                    <AnimatedTitle
+                      text={selectedExercise.replace("-", " ")}
+                      className="capitalize"
+                    />
                   </>
                 )}
               </div>
@@ -1289,7 +2321,7 @@ export function ActiveBattleScreen() {
             {/* Ready Phase Screen */}
             {gamePhase === "ready" && selectedExercise && (
               <div className="text-center mb-8">
-                <h2 className="text-3xl font-semibold text-lime-400 mb-4">
+                <h2 className="text-3xl font-semibold text-lime-400 mb-4 audiowide-regular">
                   Get Ready!
                 </h2>
                 <p className="text-lg text-slate-300 mb-4">
@@ -1301,13 +2333,21 @@ export function ActiveBattleScreen() {
                 <div className="flex justify-center gap-4 mb-4">
                   <div className={`px-4 py-2 rounded-lg ${userReady ? "bg-lime-500/20 border-2 border-lime-400" : "bg-slate-700/50 border-2 border-slate-500"}`}>
                     <p className="text-sm text-slate-400">You</p>
-                    <p className={`text-lg font-semibold ${userReady ? "text-lime-300" : "text-slate-400"}`}>
+                    <p
+                      className={`text-lg font-semibold audiowide-regular tracking-wide ${
+                        userReady ? "text-lime-300" : "text-slate-400"
+                      }`}
+                    >
                       {userReady ? "✓ Ready" : "Not Ready"}
                     </p>
                   </div>
                   <div className={`px-4 py-2 rounded-lg ${opponentReady ? "bg-lime-500/20 border-2 border-lime-400" : "bg-slate-700/50 border-2 border-slate-500"}`}>
                     <p className="text-sm text-slate-400">Opponent</p>
-                    <p className={`text-lg font-semibold ${opponentReady ? "text-lime-300" : "text-slate-400"}`}>
+                    <p
+                      className={`text-lg font-semibold audiowide-regular tracking-wide ${
+                        opponentReady ? "text-lime-300" : "text-slate-400"
+                      }`}
+                    >
                       {opponentReady ? "✓ Ready" : "Not Ready"}
                     </p>
                   </div>
@@ -1317,27 +2357,61 @@ export function ActiveBattleScreen() {
                     Position yourself in the starting position
                   </p>
                 )}
-                {/* Manual Ready Button for Testing */}
+                {/* Explicit Ready / Not Ready buttons */}
+                <div className="flex items-center justify-center gap-4">
                 <button
+                    type="button"
                   onClick={() => {
-                    const newReadyState = !userReady;
-                    setUserReady(newReadyState);
+                      if (!userReady) {
+                        setUserReady(true);
                     const sendReady = wsSendPlayerReadyRef.current;
                     if (sendReady) {
-                      console.log(`📤 [MANUAL] Sending PLAYER_READY=${newReadyState} to server...`);
-                      sendReady(newReadyState);
+                          console.log(
+                            "📤 [MANUAL] Sending PLAYER_READY=true to server..."
+                          );
+                          sendReady(true);
                     } else {
-                      console.error(`❌ [MANUAL] wsSendPlayerReady is not available!`);
+                          console.error(
+                            "❌ [MANUAL] wsSendPlayerReady is not available!"
+                          );
+                        }
                     }
                   }}
-                  className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                  className={`px-6 py-3 rounded-lg font-semibold audiowide-regular text-lg transition-colors ${
                     userReady
-                      ? "bg-red-500 hover:bg-red-600 text-white"
+                        ? "bg-lime-500 text-black"
                       : "bg-lime-500 hover:bg-lime-600 text-black"
                   }`}
                 >
-                  {userReady ? "Unready" : "Mark as Ready"}
+                    Ready
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (userReady) {
+                        setUserReady(false);
+                        const sendReady = wsSendPlayerReadyRef.current;
+                        if (sendReady) {
+                          console.log(
+                            "📤 [MANUAL] Sending PLAYER_READY=false to server..."
+                          );
+                          sendReady(false);
+                        } else {
+                          console.error(
+                            "❌ [MANUAL] wsSendPlayerReady is not available!"
+                          );
+                        }
+                      }
+                    }}
+                    className={`px-6 py-3 rounded-lg font-semibold audiowide-regular text-lg transition-colors ${
+                      userReady
+                        ? "bg-red-500 hover:bg-red-600 text-white"
+                        : "bg-slate-700 hover:bg-slate-600 text-slate-200"
+                    }`}
+                  >
+                    Not Ready
                 </button>
+                </div>
               </div>
             )}
 
@@ -1364,6 +2438,18 @@ export function ActiveBattleScreen() {
               opponentMetric={opponentReps}
               opponentName={opponentName}
             />
+
+            {/* Escape hatch so players are never stuck in a battle */}
+            <div className="mt-6 flex justify-center">
+              <ShimmerButton
+                variant="primary"
+                onClick={() => navigate("/app")}
+              >
+                <span className="audiowide-regular text-sm tracking-wide">
+                  Leave Match &amp; Return to Lobby
+                </span>
+              </ShimmerButton>
+            </div>
           </div>
         </div>
       </main>

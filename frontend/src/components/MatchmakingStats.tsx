@@ -6,6 +6,11 @@ type MatchmakingStatsProps = {
   mmr: number;
   winRate: number;
   avgReps: number;
+  /**
+   * Total ranked games played. Used to decide whether to show
+   * placeholder messaging for new users.
+   */
+  totalGames?: number;
 };
 
 export function MatchmakingStats({
@@ -13,7 +18,9 @@ export function MatchmakingStats({
   mmr,
   winRate,
   avgReps,
+  totalGames,
 }: MatchmakingStatsProps) {
+  const isNewPlayer = !totalGames || totalGames === 0;
   const stats = [
     {
       icon: <Trophy style={{ width: "16px", height: "16px" }} />,
@@ -40,6 +47,12 @@ export function MatchmakingStats({
   return (
     <section className="matchmaking-stats">
       <h3 className="matchmaking-stats-heading">Your Stats</h3>
+      {isNewPlayer && (
+        <p className="matchmaking-stats-subtitle">
+          You haven&apos;t played a ranked battle yet. These values start at{" "}
+          <strong>0</strong> and will update after your first match.
+        </p>
+      )}
       <div className="matchmaking-stats-electric-frame">
         <div className="electric-button-border">
           <div className="electric-button-border-inner" />

@@ -6,6 +6,8 @@ import { ArrowRight, Link, Zap, User as UserIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useWorkoutHistory } from "@/hooks/useWorkoutHistory";
+import { useNavigate } from "react-router-dom";
 
 interface TimelineItem {
   id: number;
@@ -34,6 +36,16 @@ export default function RadialOrbitalProfileTimeline({
   profile,
   timelineData,
 }: RadialOrbitalProfileTimelineProps) {
+  const navigate = useNavigate();
+  const {
+    workouts: recentBattleWorkouts,
+    loading: loadingBattleHistory,
+    error: battleHistoryError,
+  } = useWorkoutHistory({
+    workout_type: "battle",
+    limit: 5,
+  });
+
   const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>(
     {}
   );
@@ -173,6 +185,15 @@ export default function RadialOrbitalProfileTimeline({
   };
 
   const hasExpanded = Object.values(expandedItems).some(Boolean);
+
+  const formatDate = (isoString: string) => {
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return isoString;
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   return (
     <div
@@ -319,7 +340,82 @@ export default function RadialOrbitalProfileTimeline({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="text-xs text-white/80 space-y-3">
-                      <p>{item.content}</p>
+                      {item.category === "History" ? (
+                        <div className="space-y-3">
+                          <p>{item.content}</p>
+                          <div className="pt-1 border-t border-white/10 space-y-2">
+                            {loadingBattleHistory && (
+                              <p className="text-[0.7rem] text-white/60">
+                                Loading recent matches...
+                              </p>
+                            )}
+                            {battleHistoryError && !loadingBattleHistory && (
+                              <p className="text-[0.7rem] text-red-400">
+                                Couldn&apos;t load match history.
+                              </p>
+                            )}
+                            {!loadingBattleHistory &&
+                              !battleHistoryError &&
+                              recentBattleWorkouts.length === 0 && (
+                                <p className="text-[0.7rem] text-white/60">
+                                  No past matches yet. Jump into a battle to
+                                  start your history.
+                                </p>
+                              )}
+                            {!loadingBattleHistory &&
+                              !battleHistoryError &&
+                              recentBattleWorkouts.length > 0 && (
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[0.65rem] uppercase tracking-[0.16em] text-neutral-400">
+                                      Recent Matches
+                                    </span>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-6 px-2 py-0 text-[0.6rem] rounded-full border-white/30 bg-transparent hover:bg-white/10 text-white/80 hover:text-white"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate("/history");
+                                      }}
+                                    >
+                                      Open full history
+                                    </Button>
+                                  </div>
+                                  <div className="flex justify-between text-[0.65rem] text-white/60 font-mono">
+                                    <span>Date</span>
+                                    <span className="flex-1 ml-2">
+                                      Match
+                                    </span>
+                                    <span className="ml-2 text-right">
+                                      Score
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    {recentBattleWorkouts.map((workout) => (
+                                      <div
+                                        key={workout.id}
+                                        className="flex items-center justify-between text-[0.7rem] font-mono text-white/80"
+                                      >
+                                        <span className="tabular-nums">
+                                          {formatDate(workout.completed_at)}
+                                        </span>
+                                        <span className="flex-1 ml-2 truncate">
+                                          {workout.exercise_name}
+                                        </span>
+                                        <span className="ml-2 text-lime-300 tabular-nums">
+                                          {workout.score}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p>{item.content}</p>
+                      )}
 
                       <div className="pt-2 border-t border-white/10">
                         <div className="flex justify-between items-center text-[0.7rem] mb-1">

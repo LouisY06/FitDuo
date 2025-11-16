@@ -19,9 +19,9 @@ const exercises: Exercise[] = [
     description: "Get tips on depth and form for maximum effectiveness",
   },
   {
-    id: "lunges",
-    name: "Lunges",
-    description: "Improve your lunge technique and balance",
+    id: "situps",
+    name: "Sit-ups",
+    description: "Strengthen your core with controlled sit-ups",
   },
 ];
 

@@ -26,6 +26,11 @@ const InfoPage = lazy(() =>
 const ExerciseTester = lazy(() => 
   import("../cv/exercises/ExerciseTester").then(module => ({ default: module.ExerciseTester }))
 );
+const HistoryScreen = lazy(() =>
+  import("./components/screens/HistoryScreen").then((module) => ({
+    default: module.HistoryScreen,
+  }))
+);
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -116,6 +121,18 @@ function App() {
               <Suspense fallback={<LoadingFallback />}>
                 <ExerciseTester />
               </Suspense>
+            }
+          />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute>
+                <VantaBackground>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <HistoryScreen />
+                  </Suspense>
+                </VantaBackground>
+              </ProtectedRoute>
             }
           />
           <Route path="/" element={<Navigate to="/login" replace />} />

@@ -172,17 +172,17 @@ export const LiveBattleCard: React.FC<LiveBattleProps> = ({
             <div className="absolute -inset-5 rounded-[28px] bg-lime-400/30 blur-2xl" />
             <button
               type="button"
-              className="relative h-28 w-28 rounded-[24px] bg-gradient-to-b from-lime-400 to-lime-500 text-black text-3xl font-semibold shadow-[0_0_40px_rgba(132,255,78,0.8)]"
+              className="relative h-28 w-28 rounded-[24px] bg-gradient-to-b from-lime-400 to-lime-500 text-black text-3xl font-semibold breathe-go"
               disabled
+              aria-label={
+                isCountdown ? "Match countdown indicator" : isLive ? "Live match indicator" : "Match ended indicator"
+              }
             >
               {isCountdown && "GO"}
               {isLive && "LIVE"}
               {isEnded && "END"}
             </button>
           </div>
-          <p className="mt-2 text-[11px] text-center text-slate-400 max-w-[8rem]">
-            Button is visual only. Actual start/end is controlled by the server.
-          </p>
         </div>
       </div>
 

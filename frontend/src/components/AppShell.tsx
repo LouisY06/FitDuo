@@ -9,7 +9,17 @@ import { ProfileScreen } from "./screens/ProfileScreen";
 type Tab = "workout" | "time" | "battle" | "coach" | "profile";
 
 export function AppShell() {
-  const [activeTab, setActiveTab] = useState<Tab>("battle");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem("app_initial_tab") as Tab | null;
+      if (stored === "workout" || stored === "time" || stored === "battle" || stored === "coach" || stored === "profile") {
+        // Clear after reading so subsequent visits use the default
+        window.localStorage.removeItem("app_initial_tab");
+        return stored;
+      }
+    }
+    return "battle";
+  });
 
   const renderContent = () => {
     switch (activeTab) {

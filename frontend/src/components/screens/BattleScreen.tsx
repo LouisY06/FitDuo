@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { MatchmakingStats } from "../MatchmakingStats";
 import { ElectricButton } from "../ElectricButton";
 import { MatchmakingProgressCard } from "../MatchmakingProgressCard";
@@ -7,10 +7,13 @@ import VantaHaloBackground from "../VantaHaloBackground";
 import { useMatchmaking } from "../../hooks/useMatchmaking";
 import type { MatchFoundPayload } from "../../services/matchmaking";
 import "./BattleScreen.css";
+import { usePlayerStats } from "../../hooks/usePlayerStats";
 
 export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: () => void }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [countdown, setCountdown] = useState<number | null>(null);
+  const { stats } = usePlayerStats();
 
   // Wrap onMatchFound in useCallback to prevent WebSocket reconnections
   const handleMatchFound = useCallback(
@@ -46,6 +49,17 @@ export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: ()
     autoConnect: true,
     onMatchFound: handleMatchFound,
   });
+
+  // If we arrived from "Return to Matchmaking", auto-start matchmaking once
+  useEffect(() => {
+    if ((location.state as any)?.autoMatchmaking && !isSearching && !loading) {
+      // Start searching, then clear the state to avoid loops if user navigates back
+      startSearching().catch((err) => {
+        console.error("Failed to auto-start matchmaking:", err);
+      });
+      navigate(".", { replace: true, state: {} });
+    }
+  }, [location.state, isSearching, loading, startSearching, navigate]);
 
   const handleFindRival = async () => {
     console.log("Find Rival clicked - starting matchmaking...");
@@ -196,7 +210,13 @@ export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: ()
             <section className="matchmaking-hero">
               {/* Left Column - Stats Cards */}
               <div className="matchmaking-left">
-                <MatchmakingStats tier="Silver" mmr={1250} winRate={62} avgReps={38} />
+                <MatchmakingStats
+                  tier={stats && stats.total_games > 0 ? "Unranked" : "Unranked"}
+                  mmr={0}
+                  winRate={stats ? Math.round(stats.win_rate * 100) : 0}
+                  avgReps={stats ? Math.round(stats.total_reps / Math.max(stats.total_workouts, 1)) : 0}
+                  totalGames={stats?.total_games ?? 0}
+                />
               </div>
 
               {/* Right Column - Ready to battle CTA */}
