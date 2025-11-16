@@ -2,8 +2,8 @@ from sqlmodel import Session, select
 from app.models import GameSession, GameStatus, Exercise
 from app.services.connection_manager import ConnectionManager
 from app.services.llm_service import llm_service
+from app.services.user_stats_service import update_user_stats_after_game
 from datetime import datetime
-from app.routers.user_stats import update_user_stats_after_game
 
 
 async def handle_rep_increment(
