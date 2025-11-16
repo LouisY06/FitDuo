@@ -516,9 +516,7 @@ export const SQUAT_FORM_RULES = {
     min: SQUAT_REP_PARAMS.KNEE_ANGLE_MIN,
     max: SQUAT_REP_PARAMS.KNEE_ANGLE_MAX,
   },
-  hip_depth: {
-    required: SQUAT_REP_PARAMS.HIP_DEPTH_REQUIRED,
-  },
+  // hip_depth validation is handled in the form validation logic directly
 } as const;
 
 /**
