@@ -73,18 +73,22 @@ class MatchmakingQueue:
                 exercise_id=exercise_id,
             )
             
-            self.queue[player_id] = queued_player
-            queue_size = len(self.queue)
-            logger.info(f"Player {player_id} added to matchmaking queue (total in queue: {queue_size})")
-            
-            # Try to find a match immediately (async, don't wait)
-            asyncio.create_task(self._try_match_and_notify(player_id, session))
-            
-            # Also try matching all players in queue periodically
-            if queue_size >= 2:
-                asyncio.create_task(self._try_match_all_players(session))
-            
-            return True
+        self.queue[player_id] = queued_player
+        queue_size = len(self.queue)
+        logger.info(f"Player {player_id} added to matchmaking queue (total in queue: {queue_size})")
+        
+        # Delay matching to give WebSocket time to connect and register
+        async def delayed_match():
+            await asyncio.sleep(0.5)  # 500ms delay for WebSocket registration
+            await self._try_match_and_notify(player_id, session)
+        
+        asyncio.create_task(delayed_match())
+        
+        # Also try matching all players in queue periodically
+        if queue_size >= 2:
+            asyncio.create_task(self._try_match_all_players(session))
+        
+        return True
     
     async def remove_player(self, player_id: int) -> bool:
         """Remove a player from the queue."""
