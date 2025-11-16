@@ -242,9 +242,7 @@ export function checkFrontShinAlignment(
     ? landmarks[LUNGE_LANDMARKS.LEFT_KNEE]
     : landmarks[LUNGE_LANDMARKS.RIGHT_KNEE];
   
-  const frontAnkle = frontLeg === 'left'
-    ? landmarks[LUNGE_LANDMARKS.LEFT_ANKLE]
-    : landmarks[LUNGE_LANDMARKS.RIGHT_ANKLE];
+  // const frontAnkle = frontLeg === 'left' ? landmarks[LUNGE_LANDMARKS.LEFT_ANKLE] : landmarks[LUNGE_LANDMARKS.RIGHT_ANKLE];
   
   const frontToe = frontLeg === 'left'
     ? landmarks[LUNGE_LANDMARKS.LEFT_TOE]
