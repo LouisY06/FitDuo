@@ -23,8 +23,8 @@ import type {
   DetectionUpdateCallback,
 } from "../types/cv";
 import { validatePushupForm, calculateElbowAngle, PUSHUP_REP_PARAMS } from "../exercises/pushup-params";
-import { validateSquatForm, calculateKneeAngle, getHipYPosition, getKneeYPosition, isHipCloseToKnees, checkStandingForm, SQUAT_REP_PARAMS } from "../exercises/squat-params";
-import { checkBodyLine, checkPlankBreakage, checkInitialSetup, checkSideView as checkPlankSideView, checkKneeBend, checkPlankInitialSetup, checkKneeCollapse } from "../exercises/plank-params";
+import { validateSquatForm, calculateKneeAngle, getHipYPosition, getKneeYPosition as _getKneeYPosition, isHipCloseToKnees, checkStandingForm, SQUAT_REP_PARAMS } from "../exercises/squat-params";
+import { checkBodyLine, checkPlankBreakage, checkInitialSetup, checkSideView as checkPlankSideView, checkKneeBend as _checkKneeBend, checkPlankInitialSetup, checkKneeCollapse } from "../exercises/plank-params";
 
 export class CVDetector {
   private poseLandmarker: PoseLandmarker | null = null;
@@ -513,7 +513,7 @@ export class CVDetector {
 
     // Calculate how much hip has moved from starting position
     const hipMovementFromStart = currentHipY - (this.repState.startingHipY || currentHipY);
-    const hipMovementFromLast = this.repState.lastHipY !== undefined 
+    const _hipMovementFromLast = this.repState.lastHipY !== undefined 
       ? currentHipY - this.repState.lastHipY 
       : 0;
 

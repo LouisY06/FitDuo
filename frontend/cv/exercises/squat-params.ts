@@ -343,13 +343,13 @@ export function checkKneeAlignment(landmarks: PoseLandmark[]): {
 } {
   // Check if knees track in line with toes
   // Calculate angle between hip-knee-ankle line and vertical
-  const leftKneeAngle = calculateAngle(
+  const _leftKneeAngle = calculateAngle(
     landmarks[SQUAT_LANDMARKS.LEFT_HIP],
     landmarks[SQUAT_LANDMARKS.LEFT_KNEE],
     landmarks[SQUAT_LANDMARKS.LEFT_ANKLE]
   );
   
-  const rightKneeAngle = calculateAngle(
+  const _rightKneeAngle = calculateAngle(
     landmarks[SQUAT_LANDMARKS.RIGHT_HIP],
     landmarks[SQUAT_LANDMARKS.RIGHT_KNEE],
     landmarks[SQUAT_LANDMARKS.RIGHT_ANKLE]
@@ -396,7 +396,7 @@ export function checkTorsoPosture(landmarks: PoseLandmark[]): {
   
   // Torso should maintain relatively neutral position
   // Check if torso is leaning too far forward or backward
-  const torsoAngle = Math.abs(shoulderMidY - hipMidY);
+  const _torsoAngle = Math.abs(shoulderMidY - hipMidY);
   
   // Threshold: torso should be within reasonable range (not too forward/back)
   // This is a simplified check - in practice, you'd calculate actual angle
