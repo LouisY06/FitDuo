@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import type { ElementType } from "react";
 import { ArrowRight, Link, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ interface TimelineItem {
   date: string;
   content: string;
   category: string;
-  icon: React.ElementType;
+  icon: ElementType;
   relatedIds: number[];
   status: "completed" | "in-progress" | "pending";
   energy: number;
@@ -154,7 +155,7 @@ export default function RadialOrbitalTimeline({
 
   return (
     <div
-      className="w-full h-screen flex flex-col items-center justify-center bg-black overflow-hidden"
+      className="w-full h-full flex flex-col items-center justify-center bg-black overflow-hidden"
       ref={containerRef}
       onClick={handleContainerClick}
     >

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getCurrentUser } from "../../services/auth";
+import { RadialOrbitalTimelineDemo } from "@/components/ui/radial-orbital-timeline-demo";
 
 import {
   Card,
@@ -150,6 +151,13 @@ export function ProfileScreen() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </section>
+
+          {/* Orbital performance timeline */}
+          <section className="rounded-3xl border border-neutral-800/80 bg-black/80 overflow-hidden">
+            <div className="h-[420px] md:h-[520px]">
+              <RadialOrbitalTimelineDemo />
             </div>
           </section>
 
