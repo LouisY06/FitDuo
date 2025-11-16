@@ -372,8 +372,9 @@ export function ActiveBattleScreen() {
       if (remaining <= 0) {
         setStartCountdown(0);
         // Start the game!
+        // NOTE: Don't set timeRemaining here - let the game timer useEffect handle it
+        // to avoid double-setting and ensure proper initialization
         setGamePhase("live");
-        setTimeRemaining(60);
         // CRITICAL: Reset inactivity timer ONLY when game goes live (after countdown completes)
         setLastRepTime(Date.now());
         console.log("🎮 Game is now LIVE - inactivity timer started");
@@ -413,13 +414,18 @@ export function ActiveBattleScreen() {
     }
 
     // Reset timer to full duration when game becomes live
-    // NOTE: lastRepTime is now set when countdown completes (in countdown useEffect)
-    // to ensure inactivity timer only starts after the 5-second countdown
+    // This effect runs when gamePhase becomes "live", so we set the timer here
+    console.log(`⏱️ Starting game timer: ${durationSeconds} seconds`);
     setTimeRemaining(durationSeconds);
 
     let intervalCleared = false;
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
+        // Safety check: if timer is already at 0 or below, don't decrement further
+        if (prev <= 0) {
+          return 0;
+        }
+        
         if (prev <= 1 && !intervalCleared) {
           // Time's up! Send round end to backend
           console.log("⏰ Time's up! Sending ROUND_END to backend...");
@@ -439,7 +445,7 @@ export function ActiveBattleScreen() {
           }
           return 0;
         }
-        return prev > 0 ? prev - 1 : 0;
+        return prev - 1;
       });
     }, 1000);
 
@@ -448,7 +454,7 @@ export function ActiveBattleScreen() {
         clearInterval(interval);
       }
     };
-  }, [gamePhase, selectedExercise, playerId, gameState, durationSeconds]);
+  }, [gamePhase, selectedExercise, durationSeconds]);
 
   // Inactivity timer - end round if no reps for 10 seconds
   useEffect(() => {
@@ -1005,10 +1011,15 @@ export function ActiveBattleScreen() {
             const currentUserReady = userReadyRef.current;
             const currentOpponentReady = opponentReadyRef.current;
             
-            // Only update reps if game is live and both players are ready
+            // Always update lastRepTime when a rep is detected (even if not counting yet)
+            // This prevents the inactivity timer from triggering while waiting for opponent
+            if (currentPhase === "live") {
+              setLastRepTime(Date.now());
+            }
+            
+            // Only update reps and send to server if game is live and both players are ready
             if (currentPhase === "live" && currentUserReady && currentOpponentReady) {
               setUserReps(count);
-              setLastRepTime(Date.now()); // Update last rep time for inactivity tracking
               // Send rep update via WebSocket only when count increases
               if (sendRepIncrementRef.current && count > lastSentRepCountRef.current) {
                 sendRepIncrementRef.current(count);
