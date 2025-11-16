@@ -498,8 +498,9 @@ export function ActiveBattleScreen() {
 
   const handleRoundStart = useCallback((round: number, exerciseId?: number) => {
     console.log(`🎮 Round ${round} starting with exercise ID: ${exerciseId}`);
+    console.log(`🎮 Current showExerciseSelection: ${showExerciseSelection}, selectedExercise: ${selectedExercise}`);
     setCurrentRound(round);
-    setShowExerciseSelection(false);
+    setShowExerciseSelection(false); // Hide exercise selection screen
     setShowRoundEnd(false);
     setRoundEndData(null);
     
@@ -508,6 +509,7 @@ export function ActiveBattleScreen() {
     setTimeRemaining(durationSeconds);
     
     // Map exercise ID to exercise type if provided
+    // This is important for the waiting player who receives ROUND_START before FORM_RULES
     if (exerciseId) {
       const exerciseIdMap: Record<number, ExerciseType> = {
         1: "push-up",
@@ -517,6 +519,7 @@ export function ActiveBattleScreen() {
       };
       const exercise = exerciseIdMap[exerciseId];
       if (exercise) {
+        console.log(`🎮 Setting exercise from ROUND_START: ${exercise}`);
         setSelectedExercise(exercise);
       }
     }
@@ -526,7 +529,7 @@ export function ActiveBattleScreen() {
     setOpponentReps(0);
     lastSentRepCountRef.current = 0;
     setLastRepTime(Date.now()); // Reset inactivity timer for new round
-  }, [durationSeconds]);
+  }, [durationSeconds, showExerciseSelection, selectedExercise]);
 
   const handleRoundEnd = useCallback((data: {
     winnerId: number | null;
@@ -620,6 +623,9 @@ export function ActiveBattleScreen() {
     form_rules: Record<string, unknown>;
   }) => {
     console.log("📋 Form rules received:", data);
+    console.log("📋 Current selectedExercise:", selectedExercise);
+    console.log("📋 Current showExerciseSelection:", showExerciseSelection);
+    
     // When form rules are received, it means an exercise was selected
     // Map exercise ID to exercise type
     const exerciseIdMap: Record<number, ExerciseType> = {
@@ -629,16 +635,21 @@ export function ActiveBattleScreen() {
       4: "lunge",
     };
     const exercise = exerciseIdMap[data.exercise_id];
-    if (exercise && exercise !== selectedExercise) {
+    
+    if (exercise) {
+      // Always update exercise when FORM_RULES is received (for rounds 2 and 3)
+      // This ensures the waiting player gets the exercise selection
       setSelectedExercise(exercise);
-      setShowExerciseSelection(false);
+      setShowExerciseSelection(false); // Hide exercise selection/waiting screen
       setGamePhase("ready"); // Start ready phase
       setReadyPhaseRemaining(10);
       setUserReady(false);
       setOpponentReady(false);
       console.log(`✅ Exercise selected via FORM_RULES: ${exercise} (ID: ${data.exercise_id})`);
+    } else {
+      console.warn(`⚠️ Unknown exercise ID: ${data.exercise_id}`);
     }
-  }, [selectedExercise]);
+  }, [selectedExercise, showExerciseSelection]);
 
   // WebSocket connection (must be after all handlers are defined)
   const {
