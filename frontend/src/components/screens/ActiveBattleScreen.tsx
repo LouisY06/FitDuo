@@ -711,14 +711,17 @@ export function ActiveBattleScreen() {
       console.log(`🤝 Round ${roundThatJustEnded} was a tie`);
     }
     
+    // Check if both players had 0 reps (nothing done in this round)
+    const userScore = playerId && gameState?.playerA.id === playerId ? data.playerAScore : data.playerBScore;
+    const opponentScore = playerId && gameState?.playerA.id === playerId ? data.playerBScore : data.playerAScore;
+    const nothingDone = userScore === 0 && opponentScore === 0;
+    
     setRoundEndData({
       ...data,
       currentRound: roundThatJustEnded, // Store the round that just ended
       playerARoundsWon: gameState?.playerA.id === playerId ? newUserRoundsWon : newOpponentRoundsWon,
       playerBRoundsWon: gameState?.playerA.id === playerId ? newOpponentRoundsWon : newUserRoundsWon,
     });
-    setShowRoundEnd(true);
-    setRoundEndCountdown(5); // Reset countdown
     
     console.log(`🔍 User wins: ${newUserRoundsWon}, Opponent wins: ${newOpponentRoundsWon}`);
     console.log(`🔍 Game over check: userWins >= 2? ${newUserRoundsWon >= 2}, opponentWins >= 2? ${newOpponentRoundsWon >= 2}, round >= 3? ${roundThatJustEnded >= 3}`);
@@ -733,6 +736,8 @@ export function ActiveBattleScreen() {
     
     if (gameIsOver) {
       console.log(`🎉 Game Over! Final score - You: ${newUserRoundsWon}, Opponent: ${newOpponentRoundsWon}, Round: ${roundThatJustEnded}`);
+      setShowRoundEnd(true);
+      setRoundEndCountdown(5);
       setTimeout(() => {
         setShowGameOver(true);
         setShowRoundEnd(false);
@@ -774,18 +779,32 @@ export function ActiveBattleScreen() {
     setWhoseTurnToChoose(nextChooser);
     console.log(`🎯 Next round (${nextRound}) chooser: Player ${nextChooser}`);
     
-    // After showing round end screen, show exercise selection for next round
-    setTimeout(() => {
+    // If nothing was done in this round, skip the round end screen and go directly to next round
+    if (nothingDone) {
+      console.log(`⏩ Round ${roundThatJustEnded} had no activity - skipping round end screen, going directly to Round ${nextRound}`);
       setShowRoundEnd(false);
       setSelectedExercise(null);
-      // Reset game phase to ready so the exercise selection screen can show
       setGamePhase("ready");
-      // Backend will increment round number in next GAME_STATE update
-      // Show exercise selection screen for both players
-      // One will see the selection UI, the other will see the waiting screen
       setShowExerciseSelection(true);
-      console.log(`🎮 Showing exercise selection for Round ${nextRound} (gamePhase set to ready)`);
-    }, 5000); // Show round end screen for 5 seconds
+      console.log(`🎮 Showing exercise selection for Round ${nextRound} (skipped round end screen)`);
+    } else {
+      // Show round end screen normally
+      setShowRoundEnd(true);
+      setRoundEndCountdown(5);
+      
+      // After showing round end screen, show exercise selection for next round
+      setTimeout(() => {
+        setShowRoundEnd(false);
+        setSelectedExercise(null);
+        // Reset game phase to ready so the exercise selection screen can show
+        setGamePhase("ready");
+        // Backend will increment round number in next GAME_STATE update
+        // Show exercise selection screen for both players
+        // One will see the selection UI, the other will see the waiting screen
+        setShowExerciseSelection(true);
+        console.log(`🎮 Showing exercise selection for Round ${nextRound} (gamePhase set to ready)`);
+      }, 5000); // Show round end screen for 5 seconds
+    }
   }, [currentRound, whoseTurnToChoose, playerId, gameState, userRoundsWon, opponentRoundsWon]);
 
   const handleRepIncrement = useCallback((playerIdFromWS: number, repCount: number) => {
