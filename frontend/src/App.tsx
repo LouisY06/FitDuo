@@ -29,19 +29,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 const LoadingFallback = () => (
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      minHeight: "100vh",
-      color: "white",
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: "100vh",
+                color: "white",
       padding: "4rem 2rem",
       boxSizing: "border-box",
-    }}
-  >
+              }}
+            >
     <CyanLoadingDots size="large" />
-  </div>
+              </div>
 );
 
 function App() {
@@ -54,9 +54,9 @@ function App() {
             element={
               <VantaBackground>
                 <Suspense fallback={<LoadingFallback />}>
-                  <LoginPage />
-                </Suspense>
-              </VantaBackground>
+          <LoginPage />
+        </Suspense>
+      </VantaBackground>
             }
           />
           <Route

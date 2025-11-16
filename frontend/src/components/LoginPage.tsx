@@ -653,10 +653,10 @@ export function LoginPage() {
                   }}
                 >
                   {viewMode === "login"
-                    ? "Sign In"
-                    : viewMode === "signup"
-                    ? "Sign Up"
-                    : "Send Reset Email"}
+                ? "Sign In"
+                : viewMode === "signup"
+                ? "Sign Up"
+                : "Send Reset Email"}
                 </span>
               )}
             </button>
