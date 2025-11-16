@@ -1596,7 +1596,7 @@ export function ActiveBattleScreen() {
                         } catch {
                           // ignore storage errors
                         }
-                        navigate("/app", { state: { autoMatchmaking: true } });
+                        navigate("/app"); // Navigate to matchmaking screen without auto-starting
                       }}
                     >
                       <span className="pointer-events-none absolute inset-0 translate-x-[-120%] bg-gradient-to-r from-transparent via-white/35 to-transparent opacity-60 group-hover:translate-x-[120%] transition-transform duration-700 ease-out" />
