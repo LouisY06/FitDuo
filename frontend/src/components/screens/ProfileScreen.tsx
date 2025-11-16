@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { getCurrentUser } from "../../services/auth";
-import { RadialOrbitalTimelineDemo } from "@/components/ui/radial-orbital-timeline-demo";
+import { RadialOrbitalTimelineDemo } from "../ui/radial-orbital-timeline-demo";
 
 import {
   Card,
@@ -8,7 +8,7 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card";
+} from "../ui/card";
 import { User2, Activity, Flame, BarChart3, Trophy, Lock } from "lucide-react";
 
 interface UserProfile {

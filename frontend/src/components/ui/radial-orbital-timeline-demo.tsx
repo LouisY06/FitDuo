@@ -1,5 +1,5 @@
 import { Calendar, Code, FileText, User, Clock } from "lucide-react";
-import RadialOrbitalTimeline from "@/components/ui/radial-orbital-timeline";
+import RadialOrbitalTimeline from "./radial-orbital-timeline";
 
 const timelineData = [
   {

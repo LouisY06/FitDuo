@@ -175,7 +175,7 @@ export function BattleScreen() {
                   <div>
                     <h2 className="matchmaking-cta-title">Ready to battle?</h2>
                     <p className="matchmaking-cta-subtitle">
-                      Jump into a live 3-minute rep race against a matched rival.
+                      Jump into a live 1-minute rep race against a matched rival.
                     </p>
                   </div>
                   <div className="matchmaking-cta-row">
