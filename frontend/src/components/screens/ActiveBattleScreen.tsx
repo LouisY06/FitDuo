@@ -79,6 +79,8 @@ export function ActiveBattleScreen() {
   const [coinFlipResult, setCoinFlipResult] = useState<number | null>(null); // Player ID who won coin flip
   const [whoseTurnToChoose, setWhoseTurnToChoose] = useState<number | null>(null); // Player ID whose turn it is to choose
   const [currentRound, setCurrentRound] = useState(1);
+  const [userRoundsWon, setUserRoundsWon] = useState(0);
+  const [opponentRoundsWon, setOpponentRoundsWon] = useState(0);
   const [countdownRemaining, setCountdownRemaining] = useState(10);
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [readyPhaseRemaining, setReadyPhaseRemaining] = useState(10); // 10 seconds to get ready
@@ -474,13 +476,29 @@ export function ActiveBattleScreen() {
     strategy: Record<string, unknown>;
   }) => {
     console.log("🏁 Round ended:", data);
-    setRoundEndData(data);
+    
+    // Update round wins (frontend tracking)
+    if (data.winnerId === playerId) {
+      setUserRoundsWon(prev => prev + 1);
+    } else if (data.winnerId && data.winnerId !== playerId) {
+      setOpponentRoundsWon(prev => prev + 1);
+    }
+    
+    // Check if someone won 2 rounds (game over)
+    const newUserRoundsWon = data.winnerId === playerId ? userRoundsWon + 1 : userRoundsWon;
+    const newOpponentRoundsWon = data.winnerId && data.winnerId !== playerId ? opponentRoundsWon + 1 : opponentRoundsWon;
+    
+    setRoundEndData({
+      ...data,
+      playerARoundsWon: gameState?.playerA.id === playerId ? newUserRoundsWon : newOpponentRoundsWon,
+      playerBRoundsWon: gameState?.playerA.id === playerId ? newOpponentRoundsWon : newUserRoundsWon,
+    });
     setShowRoundEnd(true);
     setRoundEndCountdown(5); // Reset countdown
     
-    // Check if game is over
-    if (data.gameOver) {
-      console.log("🎉 Game Over! Winner:", data.matchWinnerId);
+    // Check if game is over (2 rounds won)
+    if (newUserRoundsWon >= 2 || newOpponentRoundsWon >= 2) {
+      console.log(`🎉 Game Over! ${newUserRoundsWon >= 2 ? 'You' : 'Opponent'} won ${newUserRoundsWon >= 2 ? newUserRoundsWon : newOpponentRoundsWon}-${newUserRoundsWon >= 2 ? newOpponentRoundsWon : newUserRoundsWon}`);
       setShowGameOver(true);
       // Don't show exercise selection or continue to next round
       return;
@@ -504,7 +522,7 @@ export function ActiveBattleScreen() {
     
     // After showing round end screen, show exercise selection for next round if game not finished
     setTimeout(() => {
-      if (currentRound < 3 && nextChooser && !data.gameOver) {
+      if (newUserRoundsWon < 2 && newOpponentRoundsWon < 2 && nextChooser) {
         setShowRoundEnd(false);
         setSelectedExercise(null);
         // Show exercise selection screen for both players
@@ -512,7 +530,7 @@ export function ActiveBattleScreen() {
         setShowExerciseSelection(true);
       }
     }, 5000); // Show round end screen for 5 seconds
-  }, [currentRound, whoseTurnToChoose, playerId, gameState]);
+  }, [currentRound, whoseTurnToChoose, playerId, gameState, userRoundsWon, opponentRoundsWon]);
 
   const handleRepIncrement = useCallback((playerIdFromWS: number, repCount: number) => {
     // Update opponent reps if it's not our player ID
@@ -856,13 +874,13 @@ export function ActiveBattleScreen() {
 
   // Game Over Screen
   if (showGameOver && roundEndData) {
-    const isMatchWinner = playerId && roundEndData.matchWinnerId === playerId;
-    const userRoundsWon = playerId && gameState?.playerA.id === playerId 
+    const userRounds = playerId && gameState?.playerA.id === playerId 
       ? roundEndData.playerARoundsWon || 0
       : roundEndData.playerBRoundsWon || 0;
-    const opponentRoundsWon = playerId && gameState?.playerA.id === playerId 
+    const opponentRounds = playerId && gameState?.playerA.id === playerId 
       ? roundEndData.playerBRoundsWon || 0
       : roundEndData.playerARoundsWon || 0;
+    const isMatchWinner = userRounds > opponentRounds;
 
     return (
       <>
@@ -899,11 +917,11 @@ export function ActiveBattleScreen() {
               <div className="grid grid-cols-2 gap-6 max-w-md mx-auto mb-6">
                 <div className={`border-2 rounded-xl p-6 ${isMatchWinner ? 'bg-lime-500/10 border-lime-400' : 'bg-[#020511]/80 border-slate-600'}`}>
                   <p className="text-xs uppercase tracking-wider text-slate-400 mb-2">Your Rounds Won</p>
-                  <p className="text-5xl font-semibold text-lime-400">{userRoundsWon}</p>
+                  <p className="text-5xl font-semibold text-lime-400">{userRounds}</p>
                 </div>
                 <div className={`border-2 rounded-xl p-6 ${!isMatchWinner ? 'bg-red-500/10 border-red-400' : 'bg-[#020511]/80 border-slate-600'}`}>
                   <p className="text-xs uppercase tracking-wider text-slate-400 mb-2">Opponent Rounds Won</p>
-                  <p className="text-5xl font-semibold text-sky-400">{opponentRoundsWon}</p>
+                  <p className="text-5xl font-semibold text-sky-400">{opponentRounds}</p>
                 </div>
               </div>
 
