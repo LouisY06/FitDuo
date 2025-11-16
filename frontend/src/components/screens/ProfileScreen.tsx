@@ -14,9 +14,11 @@ export function ProfileScreen() {
     const fetchUserStats = async () => {
       try {
         const user = await getCurrentUser();
-        if (user) {
+        if (user && typeof user.id === 'number') {
           const stats = await userStatsAPI.getUserStats(user.id);
           setUserStats(stats);
+        } else {
+          console.warn("⚠️ User ID is not a number (backend sync may have failed), using default stats");
         }
       } catch (error) {
         console.error("Failed to fetch user stats:", error);

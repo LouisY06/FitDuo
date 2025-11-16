@@ -2123,10 +2123,10 @@ export function ActiveBattleScreen() {
 
   // Exercise Selection Screen (only show if it's this player's turn)
   if (showExerciseSelection && !selectedExercise && whoseTurnToChoose === playerId) {
-    // Always trust server-provided currentRound to avoid desync between players.
-    // The backend sends ROUND_START with the round number; when selecting, we
-    // simply display currentRound rather than trying to predict "next" locally.
-    const displayRound = currentRound;
+    // If we have roundEndData (meaning a round just ended), we're selecting for the NEXT round
+    // so display currentRound + 1. Otherwise (first round), display currentRound
+    const hasCompletedAnyRound = roundEndData !== null;
+    const displayRound = hasCompletedAnyRound ? currentRound + 1 : currentRound;
     return (
       <>
         <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />
@@ -2241,8 +2241,10 @@ export function ActiveBattleScreen() {
 
   // Waiting for opponent to choose exercise (only show if exercise not yet selected)
   if (showExerciseSelection && !selectedExercise && whoseTurnToChoose !== playerId && whoseTurnToChoose !== null) {
-    // Same reasoning as above: rely on server currentRound to keep clients in sync.
-    const displayRound = currentRound;
+    // If we have roundEndData (meaning a round just ended), we're waiting for the NEXT round
+    // so display currentRound + 1. Otherwise (first round), display currentRound
+    const hasCompletedAnyRound = roundEndData !== null;
+    const displayRound = hasCompletedAnyRound ? currentRound + 1 : currentRound;
     return (
       <>
         <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />

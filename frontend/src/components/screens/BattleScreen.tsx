@@ -86,12 +86,62 @@ export function BattleScreen({ onNavigateToProfile: _onNavigateToProfile }: { on
     const fetchUserStats = async () => {
       try {
         const user = await getCurrentUser();
-        if (user) {
+        if (user && typeof user.id === 'number') {
           const statsResponse = await userStatsAPI.getUserStats(user.id);
           setUserStats(statsResponse);
+        } else {
+          console.warn("⚠️ User ID is not a number (backend sync may have failed), using default stats");
+          // Set default stats if user doesn't exist in backend yet
+          setUserStats({
+            userId: 0,
+            totalBattles: 0,
+            wins: 0,
+            losses: 0,
+            ties: 0,
+            winRate: 0,
+            totalReps: 0,
+            avgReps: 0,
+            bestRepsSingleRound: 0,
+            bestPushups: 0,
+            bestSquats: 0,
+            bestPlankSeconds: 0,
+            bestSitups: 0,
+            bestLunges: 0,
+            mmr: 1000,
+            tier: "Bronze",
+            currentStreak: 0,
+            longestStreak: 0,
+            totalWorkoutMinutes: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
         }
       } catch (error) {
         console.error("Failed to fetch user stats:", error);
+        // Set default stats on error
+        setUserStats({
+          userId: 0,
+          totalBattles: 0,
+          wins: 0,
+          losses: 0,
+          ties: 0,
+          winRate: 0,
+          totalReps: 0,
+          avgReps: 0,
+          bestRepsSingleRound: 0,
+          bestPushups: 0,
+          bestSquats: 0,
+          bestPlankSeconds: 0,
+          bestSitups: 0,
+          bestLunges: 0,
+          mmr: 1000,
+          tier: "Bronze",
+          currentStreak: 0,
+          longestStreak: 0,
+          totalWorkoutMinutes: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
       }
     };
     fetchUserStats();
