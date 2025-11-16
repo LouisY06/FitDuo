@@ -4,6 +4,7 @@ from .game_session import GameSession, GameStatus
 from .player_stats import PlayerStats
 from .player_workout import PlayerWorkout
 from .player_preferences import PlayerPreferences
+from .user_stats import UserStats
 
 __all__ = [
     "User",
@@ -13,5 +14,6 @@ __all__ = [
     "PlayerStats",
     "PlayerWorkout",
     "PlayerPreferences",
+    "UserStats",
 ]
 
