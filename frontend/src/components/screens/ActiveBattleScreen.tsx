@@ -83,6 +83,7 @@ export function ActiveBattleScreen() {
   const [opponentRoundsWon, setOpponentRoundsWon] = useState(0);
   const [countdownRemaining, setCountdownRemaining] = useState(10);
   const [timeRemaining, setTimeRemaining] = useState(60);
+  const [lastRepTime, setLastRepTime] = useState<number>(Date.now());
   const [readyPhaseRemaining, setReadyPhaseRemaining] = useState(10); // 10 seconds to get ready
   const [readyPhaseStartTime, setReadyPhaseStartTime] = useState<number | null>(null); // Server timestamp for sync
   const [startCountdown, setStartCountdown] = useState(5); // 5-second countdown after both ready
@@ -306,6 +307,7 @@ export function ActiveBattleScreen() {
 
     // Reset timer to full duration when game becomes live
     setTimeRemaining(durationSeconds);
+    setLastRepTime(Date.now()); // Reset inactivity timer when round starts
 
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
@@ -328,6 +330,28 @@ export function ActiveBattleScreen() {
 
     return () => clearInterval(interval);
   }, [gamePhase, selectedExercise, playerId, gameState, durationSeconds]);
+
+  // Inactivity timer - end round if no reps for 10 seconds
+  useEffect(() => {
+    if (gamePhase !== "live" || selectedExercise === "plank") return;
+
+    const checkInactivity = setInterval(() => {
+      const timeSinceLastRep = Date.now() - lastRepTime;
+      const inactivityThreshold = 10000; // 10 seconds
+
+      if (timeSinceLastRep >= inactivityThreshold) {
+        console.log("💤 10 seconds of inactivity - ending round...");
+        setGamePhase("ended");
+        const sendRoundEnd = sendRoundEndRef.current;
+        if (sendRoundEnd) {
+          sendRoundEnd();
+          console.log("📤 ROUND_END sent due to inactivity");
+        }
+      }
+    }, 1000); // Check every second
+
+    return () => clearInterval(checkInactivity);
+  }, [gamePhase, lastRepTime, selectedExercise]);
 
   const handlePlayerReady = useCallback((playerIdFromWS: number, isReady: boolean) => {
     console.log(`📨 PLAYER_READY received: playerId=${playerIdFromWS}, isReady=${isReady}, myPlayerId=${playerId}, gameState=${gameState ? JSON.stringify({playerA: gameState.playerA.id, playerB: gameState.playerB.id}) : 'null'}`);
@@ -461,6 +485,7 @@ export function ActiveBattleScreen() {
     setUserReps(0);
     setOpponentReps(0);
     lastSentRepCountRef.current = 0;
+    setLastRepTime(Date.now()); // Reset inactivity timer for new round
   }, [durationSeconds]);
 
   const handleRoundEnd = useCallback((data: {
@@ -537,6 +562,7 @@ export function ActiveBattleScreen() {
     if (playerId && playerIdFromWS !== playerId) {
       console.log(`📈 Opponent rep update: ${repCount}`);
       setOpponentReps(repCount);
+      setLastRepTime(Date.now()); // Update last rep time for inactivity tracking
     }
   }, [playerId]);
 
@@ -817,6 +843,7 @@ export function ActiveBattleScreen() {
             // Only update reps if game is live and both players are ready
             if (currentPhase === "live" && currentUserReady && currentOpponentReady) {
               setUserReps(count);
+              setLastRepTime(Date.now()); // Update last rep time for inactivity tracking
               // Send rep update via WebSocket only when count increases
               if (sendRepIncrementRef.current && count > lastSentRepCountRef.current) {
                 sendRepIncrementRef.current(count);
