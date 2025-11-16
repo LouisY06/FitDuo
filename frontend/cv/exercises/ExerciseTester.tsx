@@ -148,6 +148,7 @@ export function ExerciseTester() {
         cvDetector.setFormRules(PUSHUP_FORM_RULES, "push-up");
         break;
       case "squat":
+        // Use SQUAT_FORM_RULES directly (type-safe)
         cvDetector.setFormRules(SQUAT_FORM_RULES, "squat");
         break;
       case "sit-up":
