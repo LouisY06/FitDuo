@@ -33,8 +33,10 @@ export function BattleScreen() {
         } else {
           clearInterval(interval);
           setCountdown(null);
-          // Navigate to battle with game ID
-          navigate(`/app/battle/${payload.game_id}`);
+          // Navigate to battle screen (game ID is stored for later use)
+          console.log("🚀 Match found! Game ID:", payload.game_id);
+          // TODO: Store game_id and navigate to actual battle view
+          navigate(`/app`);
         }
       }, 1000);
     },
