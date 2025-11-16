@@ -130,14 +130,15 @@ class MatchmakingQueue:
         """Try to find a match and notify players if found."""
         match_result = await self._try_match_player(player_id, session)
         if match_result:
-            # Notify both players
+            # Notify both players (include game_id in payload)
+            game_id = match_result["game_id"]
             await self.notify_match_found(
                 match_result["player1"]["player_id"],
-                match_result["player1"],
+                {**match_result["player1"], "game_id": game_id},
             )
             await self.notify_match_found(
                 match_result["player2"]["player_id"],
-                match_result["player2"],
+                {**match_result["player2"], "game_id": game_id},
             )
     
     async def _try_match_player(
