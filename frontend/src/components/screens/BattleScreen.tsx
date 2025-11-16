@@ -64,14 +64,15 @@ export function BattleScreen() {
     }
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (isSearching) {
-        stopSearching().catch(console.error);
-      }
-    };
-  }, [isSearching, stopSearching]);
+  // Cleanup on unmount - useMatchmaking hook handles WebSocket cleanup
+  // No need to manually call stopSearching here
+  // useEffect(() => {
+  //   return () => {
+  //     if (isSearching) {
+  //       stopSearching().catch(console.error);
+  //     }
+  //   };
+  // }, [isSearching, stopSearching]);
 
   if (countdown !== null) {
     return (
