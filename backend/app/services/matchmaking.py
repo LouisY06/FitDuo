@@ -77,16 +77,26 @@ class MatchmakingQueue:
         queue_size = len(self.queue)
         logger.info(f"Player {player_id} added to matchmaking queue (total in queue: {queue_size})")
         
-        # Delay matching to give WebSocket time to connect and register
-        async def delayed_match():
-            await asyncio.sleep(1.5)  # 1.5s delay for WebSocket registration
+        # Wait for WebSocket to connect, then try matching
+        async def wait_for_websocket_then_match():
+            # Wait for WebSocket to register
+            max_wait = 3.0  # seconds
+            wait_interval = 0.1  # check every 100ms
+            waited = 0.0
+            
+            while waited < max_wait:
+                if player_id in self.matchmaking_websockets:
+                    logger.info(f"Player {player_id} WebSocket registered, attempting match")
+                    await self._try_match_and_notify(player_id, session)
+                    return
+                await asyncio.sleep(wait_interval)
+                waited += wait_interval
+            
+            # Timeout - try anyway
+            logger.warning(f"Player {player_id} WebSocket not registered after {max_wait}s, matching anyway")
             await self._try_match_and_notify(player_id, session)
         
-        asyncio.create_task(delayed_match())
-        
-        # Also try matching all players in queue periodically
-        if queue_size >= 2:
-            asyncio.create_task(self._try_match_all_players(session))
+        asyncio.create_task(wait_for_websocket_then_match())
         
         return True
     
