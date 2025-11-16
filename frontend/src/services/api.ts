@@ -52,6 +52,27 @@ export interface UserStats {
   updatedAt: string;
 }
 
+// API helper functions for backwards compatibility
+export interface ApiError {
+  message: string;
+  status?: number;
+}
+
+export const apiGet = async <T = any>(url: string): Promise<T> => {
+  const response = await api.get(url);
+  return response.data;
+};
+
+export const apiPost = async <T = any>(url: string, data?: any): Promise<T> => {
+  const response = await api.post(url, data);
+  return response.data;
+};
+
+export const apiDelete = async <T = any>(url: string): Promise<T> => {
+  const response = await api.delete(url);
+  return response.data;
+};
+
 export const userStatsAPI = {
   /**
    * Get user stats by user ID
