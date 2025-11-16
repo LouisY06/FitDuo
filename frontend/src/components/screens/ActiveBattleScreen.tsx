@@ -302,25 +302,15 @@ export function ActiveBattleScreen() {
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
-          // Time's up! Determine winner
+          // Time's up! Send round end to backend
+          console.log("⏰ Time's up! Sending ROUND_END to backend...");
           setGamePhase("ended");
-          // Determine winner based on reps
-          if (playerId && gameState) {
-            const isPlayerA = gameState.playerA.id === playerId;
-            const userScore = isPlayerA ? gameState.playerA.score : gameState.playerB.score;
-            const opponentScore = isPlayerA ? gameState.playerB.score : gameState.playerA.score;
-            const winnerId = userScore > opponentScore ? playerId : (opponentScore > userScore ? (isPlayerA ? gameState.playerB.id : gameState.playerA.id) : null);
-            
-            setRoundEndData({
-              winnerId,
-              loserId: winnerId === playerId ? (isPlayerA ? gameState.playerB.id : gameState.playerA.id) : (winnerId ? playerId : null),
-              playerAScore: gameState.playerA.score,
-              playerBScore: gameState.playerB.score,
-              narrative: "",
-              strategy: {},
-            });
-            setShowRoundEnd(true);
+          if (wsSendRoundEnd) {
+            wsSendRoundEnd();
+            console.log("📤 ROUND_END sent to backend");
           }
+          // Backend will determine winner and broadcast ROUND_END event
+          // which will trigger handleRoundEnd callback
           return 0;
         }
         return prev - 1;
@@ -328,7 +318,7 @@ export function ActiveBattleScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [gamePhase, selectedExercise, playerId, gameState, durationSeconds]);
+  }, [gamePhase, selectedExercise, playerId, gameState, durationSeconds, wsSendRoundEnd]);
 
   const handlePlayerReady = useCallback((playerIdFromWS: number, isReady: boolean) => {
     console.log(`📨 PLAYER_READY received: playerId=${playerIdFromWS}, isReady=${isReady}, myPlayerId=${playerId}, gameState=${gameState ? JSON.stringify({playerA: gameState.playerA.id, playerB: gameState.playerB.id}) : 'null'}`);
@@ -544,6 +534,7 @@ export function ActiveBattleScreen() {
     isConnected,
     error: wsError,
     sendRepIncrement: wsSendRepIncrement,
+    sendRoundEnd: wsSendRoundEnd,
     sendExerciseSelected: wsSendExerciseSelected,
     sendPlayerReady: wsSendPlayerReady,
   } = useGameWebSocket({
