@@ -55,7 +55,44 @@ export function ExerciseTester() {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480 },
         });
-        videoRef.current.srcObject = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          
+          // Wait for video to be ready and playing
+          await new Promise<void>((resolve) => {
+            const checkReady = () => {
+              if (videoRef.current && 
+                  videoRef.current.readyState >= 2 && 
+                  videoRef.current.videoWidth > 0 && 
+                  videoRef.current.videoHeight > 0) {
+                resolve();
+              } else {
+                setTimeout(checkReady, 50);
+              }
+            };
+            
+            if (videoRef.current) {
+              videoRef.current.onloadedmetadata = () => {
+                // Wait a bit more for video to actually start playing
+                setTimeout(() => {
+                  if (videoRef.current && 
+                      videoRef.current.videoWidth > 0 && 
+                      videoRef.current.videoHeight > 0) {
+                    resolve();
+                  } else {
+                    checkReady();
+                  }
+                }, 100);
+              };
+              // If already loaded, check immediately
+              if (videoRef.current.readyState >= 2) {
+                checkReady();
+              }
+            } else {
+              resolve();
+            }
+          });
+        }
 
         // Initialize CV detector
         const cvDetector = new CVDetector();

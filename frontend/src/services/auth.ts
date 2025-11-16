@@ -408,6 +408,11 @@ export function getCurrentFirebaseUser(): User | null {
 
 /**
  * Sign in with Google
+ * 
+ * Note: Cross-Origin-Opener-Policy warnings may appear in console.
+ * These are harmless - Firebase Auth uses popups for Google sign-in,
+ * and the browser's security policy blocks some popup detection methods.
+ * The sign-in will still work correctly.
  */
 export async function signInWithGoogle(): Promise<AuthResponse> {
   try {
@@ -415,6 +420,7 @@ export async function signInWithGoogle(): Promise<AuthResponse> {
     const provider = new GoogleAuthProvider();
     
     // Sign in with Google popup
+    // Note: COOP warnings in console are harmless - sign-in will still work
     const userCredential = await signInWithPopup(authInstance, provider);
     
     // Get Firebase ID token

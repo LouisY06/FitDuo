@@ -164,9 +164,13 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
 
     unsubscribers.push(
       ws.on("PLAYER_READY", (message: WebSocketMessage) => {
+        console.log(`🔔 WebSocket PLAYER_READY event received:`, message);
         if (callbacksRef.current.onPlayerReady) {
           const payload = message.payload as { playerId: number; isReady: boolean };
+          console.log(`📥 Calling onPlayerReady callback: playerId=${payload.playerId}, isReady=${payload.isReady}`);
           callbacksRef.current.onPlayerReady(payload.playerId, payload.isReady);
+        } else {
+          console.warn(`⚠️ onPlayerReady callback not set!`);
         }
       })
     );
@@ -182,9 +186,13 @@ export function useGameWebSocket(options: UseGameWebSocketOptions) {
 
     unsubscribers.push(
       ws.on("COUNTDOWN_START", (message: WebSocketMessage) => {
+        console.log(`🔔 WebSocket COUNTDOWN_START event received:`, message);
         if (callbacksRef.current.onCountdownStart) {
           const payload = message.payload as { startTimestamp: number; durationSeconds: number };
+          console.log(`📥 Calling onCountdownStart callback: startTimestamp=${payload.startTimestamp}, durationSeconds=${payload.durationSeconds}`);
           callbacksRef.current.onCountdownStart(payload.startTimestamp, payload.durationSeconds);
+        } else {
+          console.warn(`⚠️ onCountdownStart callback not set!`);
         }
       })
     );

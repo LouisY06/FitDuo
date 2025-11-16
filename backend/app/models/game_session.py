@@ -18,6 +18,8 @@ class GameSession(SQLModel, table=True):
     player_b_id: int = Field(foreign_key="user.id", index=True)
     player_a_score: int = Field(default=0)
     player_b_score: int = Field(default=0)
+    player_a_rounds_won: int = Field(default=0)
+    player_b_rounds_won: int = Field(default=0)
     current_round: int = Field(default=1)
     status: str = Field(default=GameStatus.WAITING.value)
     current_exercise_id: Optional[int] = Field(default=None, foreign_key="exercise.id")

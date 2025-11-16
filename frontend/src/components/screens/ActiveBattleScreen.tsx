@@ -94,10 +94,15 @@ export function ActiveBattleScreen() {
     loserId: number | null;
     playerAScore: number;
     playerBScore: number;
+    playerARoundsWon?: number;
+    playerBRoundsWon?: number;
+    gameOver?: boolean;
+    matchWinnerId?: number | null;
     narrative: string;
     strategy: Record<string, unknown>;
   } | null>(null);
   const [roundEndCountdown, setRoundEndCountdown] = useState(5); // 5 second countdown after round ends
+  const [showGameOver, setShowGameOver] = useState(false);
   const sendRepIncrementRef = useRef<((repCount: number) => void) | null>(null);
   const sendRoundEndRef = useRef<(() => void) | null>(null);
   const sendExerciseSelectedRef = useRef<((exerciseId: number) => void) | null>(null);
@@ -461,6 +466,10 @@ export function ActiveBattleScreen() {
     loserId: number | null;
     playerAScore: number;
     playerBScore: number;
+    playerARoundsWon?: number;
+    playerBRoundsWon?: number;
+    gameOver?: boolean;
+    matchWinnerId?: number | null;
     narrative: string;
     strategy: Record<string, unknown>;
   }) => {
@@ -468,6 +477,14 @@ export function ActiveBattleScreen() {
     setRoundEndData(data);
     setShowRoundEnd(true);
     setRoundEndCountdown(5); // Reset countdown
+    
+    // Check if game is over
+    if (data.gameOver) {
+      console.log("🎉 Game Over! Winner:", data.matchWinnerId);
+      setShowGameOver(true);
+      // Don't show exercise selection or continue to next round
+      return;
+    }
     
     // Determine who chooses next: loser chooses, or if tie, alternate
     let nextChooser: number | null = null;
@@ -487,7 +504,7 @@ export function ActiveBattleScreen() {
     
     // After showing round end screen, show exercise selection for next round if game not finished
     setTimeout(() => {
-      if (currentRound < 3 && nextChooser) {
+      if (currentRound < 3 && nextChooser && !data.gameOver) {
         setShowRoundEnd(false);
         setSelectedExercise(null);
         // Show exercise selection screen for both players
@@ -837,6 +854,82 @@ export function ActiveBattleScreen() {
     };
   }, [gameId, selectedExercise]);
 
+  // Game Over Screen
+  if (showGameOver && roundEndData) {
+    const isMatchWinner = playerId && roundEndData.matchWinnerId === playerId;
+    const userRoundsWon = playerId && gameState?.playerA.id === playerId 
+      ? roundEndData.playerARoundsWon || 0
+      : roundEndData.playerBRoundsWon || 0;
+    const opponentRoundsWon = playerId && gameState?.playerA.id === playerId 
+      ? roundEndData.playerBRoundsWon || 0
+      : roundEndData.playerARoundsWon || 0;
+
+    return (
+      <>
+        <div className="pointer-events-none fixed inset-0 bg-[#020617]/40 backdrop-blur-2xl z-0" />
+        <main className="relative min-h-screen text-neutral-50 flex items-center justify-center z-10 px-4">
+          <div className="w-full max-w-4xl">
+            <div className="text-center mb-8">
+              <h1 className="text-6xl font-semibold text-lime-400 audiowide-regular mb-6 animate-pulse">
+                🎮 GAME OVER 🎮
+              </h1>
+              
+              {/* Match Result */}
+              <div className="mt-8 mb-6">
+                {isMatchWinner ? (
+                  <div className="inline-flex items-center gap-4 bg-lime-500/20 border-4 border-lime-400 rounded-3xl px-12 py-6">
+                    <span className="text-6xl">🏆</span>
+                    <div className="text-left">
+                      <p className="text-3xl font-semibold text-lime-300">VICTORY!</p>
+                      <p className="text-lg text-lime-400/80">You won the match!</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-4 bg-red-500/20 border-4 border-red-400 rounded-3xl px-12 py-6">
+                    <span className="text-6xl">😔</span>
+                    <div className="text-left">
+                      <p className="text-3xl font-semibold text-red-300">DEFEAT</p>
+                      <p className="text-lg text-red-400/80">Better luck next time!</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Final Score */}
+              <div className="grid grid-cols-2 gap-6 max-w-md mx-auto mb-6">
+                <div className={`border-2 rounded-xl p-6 ${isMatchWinner ? 'bg-lime-500/10 border-lime-400' : 'bg-[#020511]/80 border-slate-600'}`}>
+                  <p className="text-xs uppercase tracking-wider text-slate-400 mb-2">Your Rounds Won</p>
+                  <p className="text-5xl font-semibold text-lime-400">{userRoundsWon}</p>
+                </div>
+                <div className={`border-2 rounded-xl p-6 ${!isMatchWinner ? 'bg-red-500/10 border-red-400' : 'bg-[#020511]/80 border-slate-600'}`}>
+                  <p className="text-xs uppercase tracking-wider text-slate-400 mb-2">Opponent Rounds Won</p>
+                  <p className="text-5xl font-semibold text-sky-400">{opponentRoundsWon}</p>
+                </div>
+              </div>
+
+              {/* Narrative */}
+              {roundEndData.narrative && (
+                <div className="max-w-2xl mx-auto bg-[#020511]/60 border border-slate-700 rounded-xl p-6 mb-6">
+                  <p className="text-sm text-slate-300 italic">{roundEndData.narrative}</p>
+                </div>
+              )}
+
+              {/* Action Button */}
+              <div className="mt-8">
+                <button
+                  onClick={() => window.location.href = '/app/battle'}
+                  className="px-8 py-4 bg-lime-500 hover:bg-lime-600 text-black font-semibold rounded-xl text-lg transition-colors"
+                >
+                  Return to Matchmaking
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+      </>
+    );
+  }
+
   // Round End Screen
   if (showRoundEnd && roundEndData) {
     const isWinner = playerId && roundEndData.winnerId === playerId;
@@ -847,6 +940,12 @@ export function ActiveBattleScreen() {
     const opponentScore = playerId && gameState?.playerA.id === playerId 
       ? roundEndData.playerBScore 
       : roundEndData.playerAScore;
+    const userRoundsWon = playerId && gameState?.playerA.id === playerId 
+      ? roundEndData.playerARoundsWon || 0
+      : roundEndData.playerBRoundsWon || 0;
+    const opponentRoundsWon = playerId && gameState?.playerA.id === playerId 
+      ? roundEndData.playerBRoundsWon || 0
+      : roundEndData.playerARoundsWon || 0;
 
     return (
       <>
@@ -887,6 +986,16 @@ export function ActiveBattleScreen() {
                 <div className="bg-[#020511]/80 border border-sky-400/30 rounded-xl p-4">
                   <p className="text-xs uppercase tracking-wider text-slate-400 mb-2">Opponent Score</p>
                   <p className="text-3xl font-semibold text-sky-400">{opponentScore}</p>
+                </div>
+              </div>
+
+              {/* Round Wins */}
+              <div className="mb-6">
+                <p className="text-sm text-slate-400 mb-2">Match Score (First to 2 wins)</p>
+                <div className="inline-flex items-center gap-4 bg-slate-700/30 border border-slate-600 rounded-xl px-6 py-3">
+                  <span className="text-lime-300 font-semibold">You: {userRoundsWon}</span>
+                  <span className="text-slate-500">-</span>
+                  <span className="text-sky-300 font-semibold">Opponent: {opponentRoundsWon}</span>
                 </div>
               </div>
 

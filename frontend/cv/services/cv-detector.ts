@@ -40,6 +40,15 @@ export class CVDetector {
     lastAngle: 0,
   };
   
+  // Stability tracking for squat detection (to prevent false reps from jittery landmarks)
+  private hipPositionHistory: number[] = []; // Track last N hip positions
+  private lastRepTime: number = 0; // Timestamp of last rep to prevent rapid false counts
+  private bottomReachedTime: number = 0; // Timestamp when bottom was reached (to ensure we've been at bottom before coming up)
+  private readonly STABILITY_HISTORY_SIZE = 5; // Number of frames to track for stability
+  private readonly MIN_REP_INTERVAL_MS = 1000; // Minimum time between reps (1 second)
+  private readonly MAX_HIP_MOVEMENT_PER_FRAME = 0.05; // Max hip movement per frame (5% of frame) to detect jitter
+  private readonly MIN_BOTTOM_TIME_MS = 200; // Minimum time at bottom before allowing "coming up" detection (200ms)
+  
   // Static hold state
   private holdState: StaticHoldState = {
     isStable: false,
@@ -175,7 +184,8 @@ export class CVDetector {
         if (results.landmarks && results.landmarks.length > 0) {
           const landmarks = this.convertLandmarks(results.landmarks[0]);
           
-          // Draw pose landmarks if canvas is available
+          // Draw pose landmarks FIRST (always draw if landmarks are detected)
+          // This ensures the pose overlay is visible even if validation fails
           if (this.drawingUtils && this.canvasElement && canvasCtx) {
             // Draw landmarks
             this.drawingUtils.drawLandmarks(results.landmarks[0], {
@@ -186,6 +196,20 @@ export class CVDetector {
               results.landmarks[0],
               PoseLandmarker.POSE_CONNECTIONS
             );
+          }
+          
+          // Check if landmarks are valid (person is visible in frame)
+          const hasValidLandmarks = this.hasValidLandmarks(landmarks);
+          
+          if (!hasValidLandmarks) {
+            // Person walked off screen or landmarks are invalid - reset rep state
+            // But keep the pose overlay visible (already drawn above)
+            this.resetRepStateForMissingPerson();
+            // Continue detection loop but don't process this frame for rep counting
+            if (this.isDetecting) {
+              this.animationFrameId = requestAnimationFrame(detect);
+            }
+            return;
           }
 
           // Detect reps or static holds based on exercise type
@@ -219,7 +243,9 @@ export class CVDetector {
             this.onFormError(formErrors);
           }
         } else {
-          // No pose detected - clear canvas if needed
+          // No pose detected - person walked off screen
+          this.resetRepStateForMissingPerson();
+          // Clear canvas if needed
           if (canvasCtx && this.canvasElement) {
             canvasCtx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
           }
@@ -264,6 +290,9 @@ export class CVDetector {
       startingHipY: undefined,
       bottomHipY: undefined,
     };
+    this.hipPositionHistory = [];
+    this.lastRepTime = 0;
+    this.bottomReachedTime = 0;
   }
 
   /**
@@ -332,10 +361,26 @@ export class CVDetector {
   }
 
   private detectPushUp(landmarks: PoseLandmark[]): void {
+    // First check if landmarks are valid (person is in frame)
+    if (!this.hasValidLandmarks(landmarks)) {
+      // Person not in frame - reset rep state
+      this.resetRepStateForMissingPerson();
+      return;
+    }
+
+    // Check if person is too close to camera - stop rep counting if so
+    if (this.isPersonTooClose(landmarks)) {
+      // Person too close - reset rep state and don't count reps
+      this.resetRepStateForMissingPerson();
+      return;
+    }
+
     // Calculate elbow angle first to pass to form validation
     const elbowAngle = calculateElbowAngle(landmarks);
     if (elbowAngle === null) {
-      return; // Can't calculate angle
+      // Can't calculate angle - person might be off screen
+      this.resetRepStateForMissingPerson();
+      return;
     }
 
     // Validate form with elbow angle for movement-aware leniency
@@ -386,10 +431,47 @@ export class CVDetector {
   }
 
   private detectSquat(landmarks: PoseLandmark[]): void {
+    // First check if landmarks are valid (person is in frame)
+    if (!this.hasValidLandmarks(landmarks)) {
+      // Person not in frame - reset rep state
+      this.resetRepStateForMissingPerson();
+      return;
+    }
+
+    // Check if person is too close to camera - stop rep counting if so
+    if (this.isPersonTooClose(landmarks)) {
+      // Person too close - reset rep state and don't count reps
+      this.resetRepStateForMissingPerson();
+      return;
+    }
+
     // Get current hip Y position for tracking
     const currentHipY = getHipYPosition(landmarks);
     if (currentHipY === null) {
-      return; // Can't get hip position
+      // Can't get hip position - person might be off screen
+      this.resetRepStateForMissingPerson();
+      return;
+    }
+
+    // Track hip position history for stability checking
+    this.hipPositionHistory.push(currentHipY);
+    if (this.hipPositionHistory.length > this.STABILITY_HISTORY_SIZE) {
+      this.hipPositionHistory.shift(); // Keep only last N positions
+    }
+
+    // Check for unstable/jittery landmarks (large sudden movements indicate tracking issues)
+    if (this.hipPositionHistory.length >= 3) {
+      const recentPositions = this.hipPositionHistory.slice(-3);
+      const maxMovement = Math.max(
+        ...recentPositions.slice(1).map((pos, i) => Math.abs(pos - recentPositions[i]))
+      );
+      
+      // If hip position is jumping around too much, landmarks are unstable
+      if (maxMovement > this.MAX_HIP_MOVEMENT_PER_FRAME) {
+        // Unstable tracking - don't count reps, just update position
+        this.repState.lastHipY = currentHipY;
+        return;
+      }
     }
 
     // Initialize starting hip Y if not set (first frame or reset)
@@ -400,6 +482,7 @@ export class CVDetector {
         this.repState.startingHipY = currentHipY;
         this.repState.lastHipY = currentHipY;
         this.repState.bottomHipY = undefined; // Reset bottom tracking
+        this.hipPositionHistory = [currentHipY]; // Reset history
         console.log(`🏁 Squat starting position set - hip Y: ${currentHipY.toFixed(3)}`);
       } else {
         // Not standing yet - wait for valid starting position
@@ -445,55 +528,94 @@ export class CVDetector {
     
     if (!this.repState.isDown) {
       // Not in down position - check if hip is close to knees
-      if (hipKneeCheck.isClose) {
-        // Hip is close to knees - mark as down
+      // Also ensure we're actually going down (hip Y increasing) to prevent false triggers
+      const isGoingDown = this.repState.lastHipY !== undefined && currentHipY > this.repState.lastHipY;
+      
+      if (hipKneeCheck.isClose && isGoingDown) {
+        // Hip is close to knees AND we're going down - mark as down
         this.repState.isDown = true;
         this.repState.bottomHipY = currentHipY; // Track when hip was close to knees
+        this.bottomReachedTime = Date.now(); // Record when we reached bottom
         console.log(`📉 Squat going down - hip close to knees (distance: ${distanceStr}%, hip Y: ${currentHipY.toFixed(3)})`);
       } else {
-        // Debug: log when not close yet
+        // Debug: log when not close yet or not going down
         if (hipKneeCheck.distance !== undefined && hipKneeCheck.distance < 0.30) {
           // Only log if getting close (within 30%) to avoid spam
-          console.log(`🔍 Squat tracking - hip not close yet (distance: ${distanceStr}%, movement: ${movementStr}%)`);
+          console.log(`🔍 Squat tracking - hip not close yet or not going down (distance: ${distanceStr}%, movement: ${movementStr}%, goingDown: ${isGoingDown})`);
         }
       }
     } else {
-      // In down position - track the deepest point (when hip was closest to knees)
-      if (this.repState.bottomHipY === undefined || currentHipY > this.repState.bottomHipY) {
-        // Update bottom position if we've gone deeper
+      // In down position - check face visibility before counting rep
+      // This prevents false reps when walking towards camera
+      if (!this.isFaceCompletelyVisible(landmarks)) {
+        // Face not visible - don't count rep, but keep tracking
+        this.repState.lastHipY = currentHipY;
+        return;
+      }
+      
+      // Track the deepest point (when hip was closest to knees)
+      const wasGoingDeeper = this.repState.bottomHipY === undefined || currentHipY > this.repState.bottomHipY;
+      
+      if (wasGoingDeeper) {
+        // Still going deeper - update bottom position and reset bottom time
         this.repState.bottomHipY = currentHipY;
+        this.bottomReachedTime = Date.now(); // Reset bottom time since we're still going deeper
       }
       
       // Check if coming back up (hip moving up from bottom position)
-      // More lenient: just check if hip is moving up significantly
+      // CRITICAL: Only allow "coming up" detection if:
+      // 1. We've been at the bottom for at least MIN_BOTTOM_TIME_MS
+      // 2. Hip is actually moving up (currentHipY < bottomHipY, meaning movementFromBottom is negative)
+      // 3. We're not still going down (hip Y is decreasing, not increasing)
       if (this.repState.bottomHipY !== undefined) {
+        const now = Date.now();
+        const timeAtBottom = now - this.bottomReachedTime;
         const movementFromBottom = currentHipY - this.repState.bottomHipY; // Negative = moving up
+        const isActuallyMovingUp = movementFromBottom < -hipUpThreshold; // Hip has moved up significantly
+        const isNotStillGoingDown = this.repState.lastHipY === undefined || currentHipY <= this.repState.lastHipY; // Hip Y is not increasing
         
-        // Check if hip has moved up from bottom
-        if (movementFromBottom < -hipUpThreshold) {
+        // Only proceed if we've been at bottom long enough AND we're actually moving up AND not still going down
+        if (timeAtBottom >= this.MIN_BOTTOM_TIME_MS && isActuallyMovingUp && isNotStillGoingDown) {
           // Hip is moving up from bottom
           console.log(`📈 Squat coming up - moved up ${(Math.abs(movementFromBottom) * 100).toFixed(1)}% from bottom, movement from start: ${movementStr}%`);
           
           // Check if back near starting position (more lenient)
           if (Math.abs(hipMovementFromStart) < hipReturnThreshold) {
             // Back near starting position - count the rep!
-            this.repState.isDown = false;
-            this.repState.repCount++;
-            console.log(`✅ Squat rep ${this.repState.repCount} completed! (hip was close to knees and returned to start)`);
-            if (this.onRepDetected) {
-              this.onRepDetected(this.repState.repCount);
+            // Also check minimum time between reps to prevent false counts from jittery landmarks
+            const timeSinceLastRep = now - this.lastRepTime;
+            
+            if (this.repState.isDown && timeSinceLastRep >= this.MIN_REP_INTERVAL_MS) {
+              this.repState.isDown = false;
+              this.repState.repCount++;
+              this.lastRepTime = now;
+              console.log(`✅ Squat rep ${this.repState.repCount} completed! (hip was close to knees and returned to start)`);
+              if (this.onRepDetected) {
+                this.onRepDetected(this.repState.repCount);
+              }
+              // Reset for next rep
+              this.repState.startingHipY = currentHipY;
+              this.repState.bottomHipY = undefined;
+              this.bottomReachedTime = 0;
+              this.hipPositionHistory = [currentHipY]; // Reset stability history
+            } else if (timeSinceLastRep < this.MIN_REP_INTERVAL_MS) {
+              // Too soon since last rep - likely false detection from jittery landmarks
+              console.log(`⏸️ Ignoring potential rep - too soon since last rep (${timeSinceLastRep}ms < ${this.MIN_REP_INTERVAL_MS}ms)`);
             }
-            // Reset for next rep
-            this.repState.startingHipY = currentHipY;
-            this.repState.bottomHipY = undefined;
           } else {
             // Coming up but not back to start yet
             console.log(`⏳ Squat coming up but not at start yet (${Math.abs(hipMovementFromStart) * 100}% from start, need < ${hipReturnThreshold * 100}%)`);
           }
         } else {
-          // Still going down or at bottom
+          // Still going down or at bottom (not enough time at bottom yet)
           if (hipKneeCheck.isClose) {
-            console.log(`📉 Squat at bottom - hip still close to knees (distance: ${distanceStr}%)`);
+            if (timeAtBottom < this.MIN_BOTTOM_TIME_MS) {
+              console.log(`📉 Squat at bottom - waiting for stable bottom (${timeAtBottom}ms < ${this.MIN_BOTTOM_TIME_MS}ms)`);
+            } else if (!isActuallyMovingUp) {
+              console.log(`📉 Squat at bottom - hip still close to knees (distance: ${distanceStr}%)`);
+            } else if (!isNotStillGoingDown) {
+              console.log(`📉 Squat still going down - hip Y increasing (${currentHipY.toFixed(3)} > ${this.repState.lastHipY?.toFixed(3)})`);
+            }
           }
         }
       }
@@ -507,6 +629,20 @@ export class CVDetector {
   }
 
   private detectSitUp(landmarks: PoseLandmark[]): void {
+    // First check if landmarks are valid (person is in frame)
+    if (!this.hasValidLandmarks(landmarks)) {
+      // Person not in frame - reset rep state
+      this.resetRepStateForMissingPerson();
+      return;
+    }
+
+    // Check if person is too close to camera - stop rep counting if so
+    if (this.isPersonTooClose(landmarks)) {
+      // Person too close - reset rep state and don't count reps
+      this.resetRepStateForMissingPerson();
+      return;
+    }
+
     // MediaPipe pose landmark indices
     const LEFT_SHOULDER = 11;
     const LEFT_HIP = 23;
@@ -804,6 +940,144 @@ export class CVDetector {
       angle = 360 - angle;
     }
     return angle;
+  }
+
+  /**
+   * Check if landmarks are valid (person is visible in frame)
+   * Returns false if person walked off screen or landmarks are invalid
+   */
+  private hasValidLandmarks(landmarks: PoseLandmark[]): boolean {
+    if (!landmarks || landmarks.length === 0) {
+      return false;
+    }
+
+    // Check if key landmarks are within valid bounds (0-1 for normalized coordinates)
+    // We'll check a few critical landmarks to determine if person is in frame
+    const criticalLandmarks = [
+      11, // Left shoulder
+      12, // Right shoulder
+      23, // Left hip
+      24, // Right hip
+    ];
+
+    let validCount = 0;
+    for (const index of criticalLandmarks) {
+      const landmark = landmarks[index];
+      if (landmark && 
+          landmark.x >= 0 && landmark.x <= 1 &&
+          landmark.y >= 0 && landmark.y <= 1 &&
+          !isNaN(landmark.x) && !isNaN(landmark.y)) {
+        validCount++;
+      }
+    }
+
+    // Need at least 3 out of 4 critical landmarks to be valid
+    // This ensures person is still in frame
+    return validCount >= 3;
+  }
+
+  /**
+   * Check if face is completely visible (for squat detection)
+   * Returns true if face is fully visible, false otherwise
+   * Used to prevent false reps when walking towards camera
+   * MediaPipe Pose landmark indices for face:
+   * - Nose: 0
+   * - Left eye: 2
+   * - Right eye: 5
+   * - Left ear: 7
+   * - Right ear: 8
+   */
+  private isFaceCompletelyVisible(landmarks: PoseLandmark[]): boolean {
+    if (!landmarks || landmarks.length === 0) {
+      return false;
+    }
+
+    // Key face landmarks that must be visible
+    const faceLandmarks = [
+      { index: 0, name: "Nose" },
+      { index: 2, name: "Left Eye" },
+      { index: 5, name: "Right Eye" },
+      { index: 7, name: "Left Ear" },
+      { index: 8, name: "Right Ear" },
+    ];
+
+    let visibleCount = 0;
+    for (const { index } of faceLandmarks) {
+      const landmark = landmarks[index];
+      if (landmark && 
+          landmark.x >= 0 && landmark.x <= 1 &&
+          landmark.y >= 0 && landmark.y <= 1 &&
+          !isNaN(landmark.x) && !isNaN(landmark.y)) {
+        visibleCount++;
+      }
+    }
+
+    // All 5 key face landmarks must be visible
+    return visibleCount === faceLandmarks.length;
+  }
+
+  /**
+   * Check if person is too close to camera (landmarks become unstable)
+   * Returns true if person is too close - should stop rep counting
+   */
+  private isPersonTooClose(landmarks: PoseLandmark[]): boolean {
+    if (!landmarks || landmarks.length === 0) {
+      return false;
+    }
+
+    // Check body size - if person is too close, body takes up too much of the frame
+    // Calculate distance between shoulders and hips to estimate body size
+    const LEFT_SHOULDER = 11;
+    const RIGHT_SHOULDER = 12;
+    const LEFT_HIP = 23;
+    const RIGHT_HIP = 24;
+
+    const leftShoulder = landmarks[LEFT_SHOULDER];
+    const rightShoulder = landmarks[RIGHT_SHOULDER];
+    const leftHip = landmarks[LEFT_HIP];
+    const rightHip = landmarks[RIGHT_HIP];
+
+    if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) {
+      return false; // Can't determine
+    }
+
+    // Calculate shoulder width
+    const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
+    // Calculate body height (shoulder to hip)
+    const bodyHeight = Math.abs(
+      (leftShoulder.y + rightShoulder.y) / 2 - (leftHip.y + rightHip.y) / 2
+    );
+
+    // If shoulders take up more than 80% of frame width, person is too close
+    // If body height is more than 60% of frame height, person is too close
+    const MAX_SHOULDER_WIDTH = 0.80; // 80% of frame width
+    const MAX_BODY_HEIGHT = 0.60; // 60% of frame height
+
+    const isTooClose = shoulderWidth > MAX_SHOULDER_WIDTH || bodyHeight > MAX_BODY_HEIGHT;
+
+    if (isTooClose) {
+      console.log(`⚠️ Person too close to camera - shoulderWidth: ${(shoulderWidth * 100).toFixed(1)}%, bodyHeight: ${(bodyHeight * 100).toFixed(1)}%`);
+    }
+
+    return isTooClose;
+  }
+
+  /**
+   * Reset rep state when person walks off screen
+   * This prevents false rep counts when landmarks become invalid
+   */
+  private resetRepStateForMissingPerson(): void {
+    // Only reset if we were in the middle of a rep
+    // This prevents losing progress if person briefly goes out of frame
+    if (this.repState.isDown) {
+      // Person was in the middle of a rep - reset to prevent false counts
+      this.repState.isDown = false;
+      this.repState.bottomHipY = undefined;
+      this.bottomReachedTime = 0;
+      this.hipPositionHistory = [];
+      console.log("⚠️ Person left frame - resetting rep state to prevent false counts");
+    }
+    // Don't reset repCount or startingHipY - keep those for when person returns
   }
 }
 

@@ -452,6 +452,13 @@ export const SQUAT_REP_PARAMS = {
   // Form check thresholds
   KNEE_ALIGNMENT_THRESHOLD: 0.05, // 5% deviation allowed
   STANDING_THRESHOLD: 0.7, // Hip Y < 0.7 means standing (hip in upper 70% of frame)
+  
+  // Knee angle thresholds for form validation
+  KNEE_ANGLE_MIN: 60, // Minimum knee angle at bottom of squat (degrees)
+  KNEE_ANGLE_MAX: 180, // Maximum knee angle at top (fully extended)
+  
+  // Hip depth requirement
+  HIP_DEPTH_REQUIRED: true, // Hip must go below knee level
 } as const;
 
 /**

@@ -98,9 +98,10 @@ export class GameWebSocket {
         this.ws.onmessage = (event) => {
           try {
             const message: WebSocketMessage = JSON.parse(event.data);
+            console.log(`📥 WebSocket message received:`, message);
             this.handleMessage(message);
           } catch (error) {
-            console.error("Error parsing WebSocket message:", error);
+            console.error("Error parsing WebSocket message:", error, "Raw data:", event.data);
           }
         };
 
@@ -154,9 +155,12 @@ export class GameWebSocket {
    */
   send(message: WebSocketMessage): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
+      const jsonMessage = JSON.stringify(message);
+      console.log(`📤 WebSocket.send() called: sending JSON=${jsonMessage}`);
+      this.ws.send(jsonMessage);
+      console.log(`✅ WebSocket.send() completed`);
     } else {
-      console.warn("WebSocket is not connected. Message not sent:", message);
+      console.error(`❌ WebSocket is not connected. Message not sent:`, message, `ws=${this.ws ? 'exists' : 'null'}, readyState=${this.ws?.readyState}`);
     }
   }
 
@@ -204,10 +208,21 @@ export class GameWebSocket {
    * Send player ready status
    */
   sendPlayerReady(isReady: boolean): void {
-    this.send({
+    console.log(`📡 WebSocket: Sending PLAYER_READY message, isReady=${isReady}, ws.readyState=${this.ws?.readyState}, ws=${this.ws ? 'exists' : 'null'}`);
+    if (!this.ws) {
+      console.error(`❌ Cannot send PLAYER_READY: WebSocket is null!`);
+      return;
+    }
+    if (this.ws.readyState !== WebSocket.OPEN) {
+      console.error(`❌ Cannot send PLAYER_READY: WebSocket not open! readyState=${this.ws.readyState} (1=OPEN, 0=CONNECTING, 2=CLOSING, 3=CLOSED)`);
+      return;
+    }
+    const message: WebSocketMessage = {
       type: "PLAYER_READY",
       payload: { isReady },
-    });
+    };
+    console.log(`📤 Actually sending message:`, JSON.stringify(message));
+    this.send(message);
   }
 
   /**
@@ -245,15 +260,21 @@ export class GameWebSocket {
    * Handle incoming messages
    */
   private handleMessage(message: WebSocketMessage): void {
+    console.log(`🔔 handleMessage called for type=${message.type}, handlers exist=${this.handlers.has(message.type)}`);
     const handlers = this.handlers.get(message.type);
     if (handlers) {
-      handlers.forEach((handler) => {
+      console.log(`📋 Found ${handlers.length} handler(s) for ${message.type}`);
+      handlers.forEach((handler, index) => {
         try {
+          console.log(`▶️ Calling handler ${index + 1}/${handlers.length} for ${message.type}`);
           handler(message);
+          console.log(`✅ Handler ${index + 1} completed for ${message.type}`);
         } catch (error) {
-          console.error(`Error in handler for ${message.type}:`, error);
+          console.error(`❌ Error in handler ${index + 1} for ${message.type}:`, error);
         }
       });
+    } else {
+      console.warn(`⚠️ No handlers registered for message type: ${message.type}`);
     }
   }
 
