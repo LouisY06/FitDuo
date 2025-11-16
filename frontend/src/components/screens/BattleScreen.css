@@ -121,8 +121,8 @@
   justify-content: space-between;
   gap: 1.25rem;
   box-sizing: border-box;
-  /* Shift card 100px down and 100px to the right for final placement */
-  margin-top: 100px;
+  /* Shift card 130px down and 100px to the right for final placement */
+  margin-top: 130px;
   margin-left: 100px;
 }
 

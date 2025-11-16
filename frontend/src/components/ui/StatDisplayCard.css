@@ -17,6 +17,8 @@
   transition: all 0.7s ease;
   box-sizing: border-box;
   z-index: 1;
+  /* Ensure inner glow / gradient respects rounded corners */
+  overflow: hidden;
 }
 
 .stat-display-card::after {
@@ -32,6 +34,7 @@
     transparent 100%
   );
   pointer-events: none;
+  border-radius: inherit;
 }
 
 .stat-display-card:hover {

@@ -165,7 +165,35 @@ export function BottomNavBar({ activeTab = "battle", onTabChange }: BottomNavBar
           }}
           title="Profile - Match history, performance breakdowns, rankings, and personal settings"
         >
-          <div style={{ fontSize: "24px" }}>👤</div>
+          {/* Crossed swords icon inspired by your battle visuals */}
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <g
+              stroke={activeTab === "profile" ? "#63FF00" : "#9CA3AF"}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {/* Left sword */}
+              <path d="M5.5 4.5L10.5 9.5L8 12L3 7" />
+              <path d="M8.5 11.5L4.5 15.5" />
+              <path d="M3.5 16.5L5.5 18.5" />
+
+              {/* Right sword */}
+              <path d="M18.5 4.5L13.5 9.5L16 12L21 7" />
+              <path d="M15.5 11.5L19.5 15.5" />
+              <path d="M20.5 16.5L18.5 18.5" />
+
+              {/* Crossing detail */}
+              <path d="M9 13L15 7" />
+              <path d="M15 13L9 7" />
+            </g>
+          </svg>
         </div>
       </div>
 

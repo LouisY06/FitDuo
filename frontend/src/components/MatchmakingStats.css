@@ -15,7 +15,8 @@
 }
 
 .stats-title {
-  margin: 0 0 1.25rem 0;
+  /* Visually drop the title while keeping the cards in place */
+  margin: 50px 0 1.25rem 0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #63ff00;
@@ -35,6 +36,8 @@
   position: relative;
   overflow: visible;
   padding: 0.5rem 0;
+  /* Counter the title margin so cards stay anchored */
+  margin-top: -50px;
   box-sizing: border-box;
 }
 
