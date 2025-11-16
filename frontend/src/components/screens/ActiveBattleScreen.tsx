@@ -550,6 +550,7 @@ export function ActiveBattleScreen() {
       if (newUserRoundsWon < 2 && newOpponentRoundsWon < 2 && nextChooser) {
         setShowRoundEnd(false);
         setSelectedExercise(null);
+        setCurrentRound(prev => prev + 1); // Increment round number
         // Show exercise selection screen for both players
         // One will see the selection UI, the other will see the waiting screen
         setShowExerciseSelection(true);
