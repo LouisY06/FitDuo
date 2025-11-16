@@ -181,7 +181,16 @@ export function useMatchmaking(
       setLoading(true);
       setError(null);
 
-      await leaveQueue();
+      // Try to leave queue (ignore 404 if already removed)
+      try {
+        await leaveQueue();
+      } catch (err: any) {
+        // Ignore "Not in queue" errors - user might have been matched already
+        if (err.status !== 404) {
+          throw err;
+        }
+      }
+      
       setIsSearching(false);
       setQueueStatus(null);
 
