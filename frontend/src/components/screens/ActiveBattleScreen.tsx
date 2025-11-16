@@ -456,33 +456,15 @@ export function ActiveBattleScreen() {
     }
     
     // Handle round end state - show round end screen
+    // NOTE: This should NOT trigger if handleRoundEnd callback already handled it
+    // The ROUND_END WebSocket message should be the source of truth, not GAME_STATE
     if (state.status === "round_end" || state.status === "ended_time" || state.status === "ended_inactivity") {
+      // Only handle here if handleRoundEnd hasn't been called yet
+      // (handleRoundEnd is called from ROUND_END WebSocket message)
       if (!showRoundEnd && playerId) {
-        // Determine winner/loser from scores
-        const isPlayerA = state.playerA.id === playerId;
-        const userScore = isPlayerA ? state.playerA.score : state.playerB.score;
-        const opponentScore = isPlayerA ? state.playerB.score : state.playerA.score;
-        const winnerId = userScore > opponentScore ? playerId : (opponentScore > userScore ? (isPlayerA ? state.playerB.id : state.playerA.id) : null);
-        
-        setRoundEndData({
-          winnerId,
-          loserId: winnerId === playerId ? (isPlayerA ? state.playerB.id : state.playerA.id) : (winnerId ? playerId : null),
-          playerAScore: state.playerA.score,
-          playerBScore: state.playerB.score,
-          narrative: "",
-          strategy: {},
-        });
-        setShowRoundEnd(true);
-        
-        // After showing round end screen, determine who chooses next
-        // (This will be handled by handleRoundEnd callback, but we also handle it here for state updates)
-        setTimeout(() => {
-          if ((state.currentRound || 1) < 3) {
-            setShowRoundEnd(false);
-            setSelectedExercise(null);
-            // Don't automatically show exercise selection - wait for round end handler
-          }
-        }, 5000); // Show round end screen for 5 seconds
+        console.log("📊 GAME_STATE shows round_end, but handleRoundEnd should handle this");
+        // Don't duplicate round end handling - let handleRoundEnd callback do it
+        // This is just a fallback for state updates
       }
     }
     
@@ -566,20 +548,30 @@ export function ActiveBattleScreen() {
     setRoundEndCountdown(5); // Reset countdown
     
     // Use the round number from the backend message (which is the round that just ended)
-    const roundThatJustEnded = data.currentRound || currentRound;
-    console.log(`🔍 Round that just ended: ${roundThatJustEnded}, User wins: ${newUserRoundsWon}, Opponent wins: ${newOpponentRoundsWon}`);
+    // Prefer data.currentRound from backend, fallback to currentRound state
+    const roundThatJustEnded = data.currentRound !== undefined ? data.currentRound : currentRound;
+    console.log(`🔍 Round that just ended: ${roundThatJustEnded} (from data: ${data.currentRound}, from state: ${currentRound})`);
+    console.log(`🔍 User wins: ${newUserRoundsWon}, Opponent wins: ${newOpponentRoundsWon}`);
+    console.log(`🔍 Game over check: userWins >= 2? ${newUserRoundsWon >= 2}, opponentWins >= 2? ${newOpponentRoundsWon >= 2}, round >= 3? ${roundThatJustEnded >= 3}`);
     
     // Check if someone won 2 rounds (best of 3 winner) OR if we just completed round 3
+    // Game ends if:
+    // 1. Someone won 2 rounds (best of 3), OR
+    // 2. Round 3 just ended (regardless of score - play all 3 rounds)
     const gameIsOver = newUserRoundsWon >= 2 || newOpponentRoundsWon >= 2 || roundThatJustEnded >= 3;
     
+    console.log(`🔍 Game is over? ${gameIsOver} (reason: ${newUserRoundsWon >= 2 ? 'user won 2' : newOpponentRoundsWon >= 2 ? 'opponent won 2' : roundThatJustEnded >= 3 ? 'round 3 ended' : 'none'})`);
+    
     if (gameIsOver) {
-      console.log(`🎉 Game Over! Final score - You: ${newUserRoundsWon}, Opponent: ${newOpponentRoundsWon}`);
+      console.log(`🎉 Game Over! Final score - You: ${newUserRoundsWon}, Opponent: ${newOpponentRoundsWon}, Round: ${roundThatJustEnded}`);
       setTimeout(() => {
         setShowGameOver(true);
         setShowRoundEnd(false);
       }, 5000);
       return;
     }
+    
+    console.log(`✅ Game continues to next round. Current: Round ${roundThatJustEnded}, Next: Round ${roundThatJustEnded + 1}`);
     
     // Determine who chooses next: loser chooses, or if tie, alternate
     let nextChooser: number | null = null;
