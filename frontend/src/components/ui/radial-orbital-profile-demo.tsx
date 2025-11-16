@@ -5,7 +5,7 @@ import {
   Dumbbell,
   HeartHandshake,
   Target,
-  Trophy,
+  Trophy as _Trophy,
   User as UserIcon,
   Clock3,
 } from "lucide-react";

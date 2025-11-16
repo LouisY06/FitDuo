@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { LiveBattleCard } from "../LiveBattleCard";
 import { CVDetector } from "../../../cv/services/cv-detector";
 import { PUSHUP_FORM_RULES } from "../../../cv/exercises/pushup-params";
-import { SQUAT_FORM_RULES, checkStandingForm } from "../../../cv/exercises/squat-params";
+import { SQUAT_FORM_RULES, checkStandingForm as _checkStandingForm } from "../../../cv/exercises/squat-params";
 import { PLANK_FORM_RULES } from "../../../cv/exercises/plank-params";
 import { LUNGE_FORM_RULES } from "../../../cv/exercises/lunge-params";
 import { useGameWebSocket } from "../../hooks/useGameWebSocket";
@@ -81,7 +81,7 @@ export function ActiveBattleScreen() {
   const [currentRound, setCurrentRound] = useState(1);
   const [userRoundsWon, setUserRoundsWon] = useState(0);
   const [opponentRoundsWon, setOpponentRoundsWon] = useState(0);
-  const [countdownRemaining, setCountdownRemaining] = useState(10);
+  const [_countdownRemaining, setCountdownRemaining] = useState(10);
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [lastRepTime, setLastRepTime] = useState<number>(Date.now());
   const [readyPhaseRemaining, setReadyPhaseRemaining] = useState(10); // 10 seconds to get ready
@@ -90,7 +90,7 @@ export function ActiveBattleScreen() {
   const [countdownStartTime, setCountdownStartTime] = useState<number | null>(null); // Server timestamp for sync
   const [userReady, setUserReady] = useState(false);
   const [opponentReady, setOpponentReady] = useState(false);
-  const [isInStartingPosition, setIsInStartingPosition] = useState(false);
+  const [_isInStartingPosition, _setIsInStartingPosition] = useState(false);
   const [gamePhase, setGamePhase] = useState<"ready" | "countdown" | "live" | "ended">("ready");
   const [roundEndData, setRoundEndData] = useState<{
     winnerId: number | null;
@@ -117,8 +117,8 @@ export function ActiveBattleScreen() {
   const wsSendPlayerReadyRef = useRef<((isReady: boolean) => void) | null>(null);
   
   // Game state derived values
-  const gameStateStr = gameState?.status || "countdown";
-  const durationSeconds = 60;
+  const _gameStateStr = gameState?.status || "countdown";
+  const _durationSeconds = 60;
   
   // Get selected exercise form rules
   const getSelectedExerciseRules = (): any => {
@@ -230,12 +230,12 @@ export function ActiveBattleScreen() {
   }, [selectedExercise, gamePhase, readyPhaseStartTime]);
 
   // Handle ready phase start from server (for timer synchronization)
-  const handleReadyPhaseStart = useCallback((startTimestamp: number, durationSeconds: number) => {
+  const handleReadyPhaseStart = useCallback((startTimestamp: number, _durationSeconds: number) => {
     console.log(`⏱️ Ready phase started at server time: ${startTimestamp}`);
     // Convert server timestamp (seconds) to client timestamp (milliseconds)
     // Account for potential clock skew by using relative time
-    const serverTimeMs = startTimestamp * 1000;
-    const clientTimeMs = Date.now();
+    const _serverTimeMs = startTimestamp * 1000;
+    const _clientTimeMs = Date.now();
     // Store the server timestamp as-is, timer will calculate relative to current time
     setReadyPhaseStartTime(startTimestamp);
     setGamePhase("ready");

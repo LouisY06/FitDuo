@@ -1,4 +1,4 @@
-import { BottomNavBar } from "./BottomNavBar";
+// BottomNavBar removed - using AppShell navigation instead
 
 export function FitnessTrackerScreen() {
   return (
