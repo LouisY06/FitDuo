@@ -99,6 +99,7 @@ export function ActiveBattleScreen() {
   } | null>(null);
   const [roundEndCountdown, setRoundEndCountdown] = useState(5); // 5 second countdown after round ends
   const sendRepIncrementRef = useRef<((repCount: number) => void) | null>(null);
+  const sendRoundEndRef = useRef<(() => void) | null>(null);
   const sendExerciseSelectedRef = useRef<((exerciseId: number) => void) | null>(null);
   const lastSentRepCountRef = useRef<number>(0);
   // Refs to track game state for rep callback (to avoid stale closures)
@@ -305,8 +306,9 @@ export function ActiveBattleScreen() {
           // Time's up! Send round end to backend
           console.log("⏰ Time's up! Sending ROUND_END to backend...");
           setGamePhase("ended");
-          if (wsSendRoundEnd) {
-            wsSendRoundEnd();
+          const sendRoundEnd = sendRoundEndRef.current;
+          if (sendRoundEnd) {
+            sendRoundEnd();
             console.log("📤 ROUND_END sent to backend");
           }
           // Backend will determine winner and broadcast ROUND_END event
@@ -318,7 +320,7 @@ export function ActiveBattleScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [gamePhase, selectedExercise, playerId, gameState, durationSeconds, wsSendRoundEnd]);
+  }, [gamePhase, selectedExercise, playerId, gameState, durationSeconds]);
 
   const handlePlayerReady = useCallback((playerIdFromWS: number, isReady: boolean) => {
     console.log(`📨 PLAYER_READY received: playerId=${playerIdFromWS}, isReady=${isReady}, myPlayerId=${playerId}, gameState=${gameState ? JSON.stringify({playerA: gameState.playerA.id, playerB: gameState.playerB.id}) : 'null'}`);
@@ -700,6 +702,10 @@ export function ActiveBattleScreen() {
   useEffect(() => {
     sendRepIncrementRef.current = wsSendRepIncrement;
   }, [wsSendRepIncrement]);
+
+  useEffect(() => {
+    sendRoundEndRef.current = wsSendRoundEnd;
+  }, [wsSendRoundEnd]);
 
   useEffect(() => {
     sendExerciseSelectedRef.current = wsSendExerciseSelected;
