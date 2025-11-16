@@ -24,21 +24,13 @@ import {
   validateSquatForm,
 } from "./squat-params";
 import {
-  LUNGE_FORM_RULES,
-  determineFrontLeg,
-  calculateFrontKneeAngle,
-  calculateBackKneeAngle,
-  checkBackKneeHeight,
-  checkFrontShinAlignment,
-} from "./lunge-params";
-import {
   PLANK_FORM_RULES,
   checkInitialSetup,
   checkBodyLine as checkPlankBodyLine,
   checkPlankBreakage,
 } from "./plank-params";
 
-type ExerciseType = "push-up" | "squat" | "lunge" | "plank";
+type ExerciseType = "push-up" | "squat" | "sit-up" | "plank";
 
 export function ExerciseTester() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -118,8 +110,8 @@ export function ExerciseTester() {
       case "squat":
         cvDetector.setFormRules(SQUAT_FORM_RULES, "squat");
         break;
-      case "lunge":
-        cvDetector.setFormRules(LUNGE_FORM_RULES, "lunge");
+      case "sit-up":
+        cvDetector.setFormRules({}, "sit-up");
         break;
       case "plank":
         cvDetector.setFormRules(PLANK_FORM_RULES, "plank");
@@ -200,20 +192,35 @@ export function ExerciseTester() {
           ...(formValidation.errors.length > 0 && { Errors: formValidation.errors.join("; ") }),
         };
       }
-      case "lunge": {
-        const frontLeg = determineFrontLeg(landmarks);
-        if (!frontLeg) return { "Status": "Cannot determine front leg" };
-        const frontAngle = calculateFrontKneeAngle(landmarks, frontLeg);
-        const backAngle = calculateBackKneeAngle(landmarks, frontLeg);
-        const backKneeHeight = checkBackKneeHeight(landmarks, frontLeg);
-        const shinAlign = checkFrontShinAlignment(landmarks, frontLeg);
+      case "sit-up": {
+        // MediaPipe pose landmark indices
+        const LEFT_SHOULDER = 11;
+        const LEFT_HIP = 23;
+        const RIGHT_SHOULDER = 12;
+        const RIGHT_HIP = 24;
+
+        // Calculate angle between shoulders and hips (torso angle)
+        const shoulderMidY = (landmarks[LEFT_SHOULDER].y + landmarks[RIGHT_SHOULDER].y) / 2;
+        const hipMidY = (landmarks[LEFT_HIP].y + landmarks[RIGHT_HIP].y) / 2;
+
+        // Vertical distance from shoulders to hips
+        // When lying down: shoulders and hips at similar Y (small torsoAngle)
+        // When sitting up: shoulders higher than hips (large torsoAngle)
+        const torsoAngle = Math.abs(shoulderMidY - hipMidY);
+        
+        // Thresholds for sit-up detection
+        // When lying down: torsoAngle is small (< 0.05)
+        // When sitting up: torsoAngle is large (> 0.15)
+        const downThreshold = 0.05; // Small angle = lying down
+        const upThreshold = 0.15; // Large angle = sitting up
+        
+        const isAtBottom = torsoAngle < downThreshold; // Small angle = lying down
+        const isAtTop = torsoAngle > upThreshold; // Large angle = sitting up
+        
         return {
-          "Front Leg": frontLeg,
-          "Front Knee Angle": `${frontAngle.toFixed(1)}°`,
-          "Back Knee Angle": `${backAngle.toFixed(1)}°`,
-          "Back Knee Height": backKneeHeight ? "✅" : "❌",
-          "Shin Alignment": shinAlign.isValid ? "✅" : "❌",
-          ...(shinAlign.error && { Error: shinAlign.error }),
+          "Torso Angle": `${(torsoAngle * 100).toFixed(1)}%`,
+          "Position": isAtBottom ? "📉 Lying Down" : isAtTop ? "📈 Sitting Up" : "🔄 Transitioning",
+          "Form Valid": result?.formValid ? "✅" : "❌",
         };
       }
       case "plank": {
@@ -255,7 +262,7 @@ export function ExerciseTester() {
         >
           <option value="push-up">Push-up</option>
           <option value="squat">Squat</option>
-          <option value="lunge">Lunge</option>
+          <option value="sit-up">Sit-up</option>
           <option value="plank">Plank</option>
         </select>
       </div>
