@@ -543,9 +543,11 @@ export function ActiveBattleScreen() {
     setShowRoundEnd(true);
     setRoundEndCountdown(5); // Reset countdown
     
-    // Check if this was round 3 - game over after 3 rounds ALWAYS
-    if (currentRound >= 3) {
-      console.log(`🎉 Game Over after 3 rounds! Final score - You: ${newUserRoundsWon}, Opponent: ${newOpponentRoundsWon}`);
+    // Check if someone won 2 rounds (best of 3 winner) OR if this was round 3
+    const gameIsOver = newUserRoundsWon >= 2 || newOpponentRoundsWon >= 2 || currentRound >= 3;
+    
+    if (gameIsOver) {
+      console.log(`🎉 Game Over! Final score - You: ${newUserRoundsWon}, Opponent: ${newOpponentRoundsWon}`);
       setTimeout(() => {
         setShowGameOver(true);
         setShowRoundEnd(false);
