@@ -25,10 +25,11 @@ export function BattleScreen() {
       } else {
         clearInterval(interval);
         setCountdown(null);
-        // Navigate to battle screen (game ID is stored for later use)
+        // Show simple battle placeholder
         console.log("🚀 Match found! Game ID:", payload.game_id);
-        // TODO: Store game_id and navigate to actual battle view
-        navigate(`/app`);
+        console.log("🎮 Opponent:", payload.opponent_name);
+        alert(`Match found!\nGame ID: ${payload.game_id}\nVS: ${payload.opponent_name}\n\nBattle UI coming soon! 🎮`);
+        // Stay on matchmaking screen for now
       }
     }, 1000);
   }, [navigate]);
