@@ -183,23 +183,24 @@ export default function RadialOrbitalProfileTimeline({
       <div className="relative w-full max-w-4xl h-full flex items-center justify-center">
         {!hasExpanded && (
           <div className="absolute z-20 flex flex-col items-center gap-3 pointer-events-none -translate-y-10">
-            <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-teal-500 flex items-center justify-center shadow-orbital">
+            <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-lime-400 via-emerald-400 to-teal-400 flex items-center justify-center shadow-orbital">
               <div className="w-20 h-20 rounded-full bg-black/70 border border-white/60 flex items-center justify-center text-2xl font-semibold">
                 <UserIcon size={28} />
               </div>
               <div className="absolute inset-0 rounded-full border border-white/20 animate-ping opacity-50" />
             </div>
             <div className="text-center space-y-1">
-              <h2 className="text-xl font-semibold tracking-tight">
+              <h2
+                className="text-xl audiowide-regular tracking-tight"
+                style={{
+                  color: "#63ff00",
+                  textShadow: "0 0 18px rgba(99, 255, 0, 0.7)",
+                }}
+              >
                 {profile.name}
               </h2>
               {profile.handle && (
                 <p className="text-xs text-white/60">@{profile.handle}</p>
-              )}
-              {profile.tagline && (
-                <p className="text-xs text-white/70 max-w-xs mx-auto">
-                  {profile.tagline}
-                </p>
               )}
             </div>
           </div>
@@ -283,9 +284,9 @@ export default function RadialOrbitalProfileTimeline({
                 <div
                   className={`
                     absolute top-12 whitespace-nowrap
-                    text-xs font-semibold tracking-wider
+                    text-[10px] audiowide-regular uppercase tracking-[0.18em]
                     transition-all duration-300
-                    ${isExpanded ? "text-white scale-125" : "text-white/70"}
+                    ${isExpanded ? "text-lime-300 scale-125" : "text-neutral-200/80"}
                   `}
                 >
                   {item.title}

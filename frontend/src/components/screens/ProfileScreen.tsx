@@ -1,4 +1,4 @@
-import { RadialOrbitalProfileDemo } from "@/components/ui/radial-orbital-profile-demo";
+import { RadialOrbitalProfileDemo, defaultProfile } from "@/components/ui/radial-orbital-profile-demo";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../../services/auth";
@@ -25,7 +25,7 @@ export function ProfileScreen() {
               <Button
                 variant="outline"
                 size="sm"
-                className="px-4 py-2 text-sm bg-black/40 border-white/20 text-white/80 hover:bg-white/10 hover:text-white"
+                className="px-4 py-2 text-xs audiowide-regular tracking-[0.12em] uppercase bg-black/40 border border-lime-400/70 text-lime-300 hover:bg-lime-400/10 hover:text-lime-200"
                 onClick={() => navigate("/info")}
               >
                 About
@@ -33,7 +33,7 @@ export function ProfileScreen() {
               <Button
                 variant="outline"
                 size="sm"
-                className="px-4 py-2 text-sm bg-black/40 border-white/20 text-white/80 hover:bg-white/10 hover:text-white"
+                className="px-4 py-2 text-xs audiowide-regular tracking-[0.12em] uppercase bg-black/40 border border-lime-400/70 text-lime-300 hover:bg-lime-400/10 hover:text-lime-200"
                 onClick={() => navigate("/discover")}
               >
                 Welcome Back
@@ -41,7 +41,7 @@ export function ProfileScreen() {
               <Button
                 variant="outline"
                 size="sm"
-                className="px-4 py-2 text-sm bg-black/40 border-white/20 text-white/80 hover:bg-white/10 hover:text-white"
+                className="px-4 py-2 text-xs audiowide-regular tracking-[0.12em] uppercase bg-black/40 border border-lime-400/70 text-lime-300 hover:bg-lime-400/10 hover:text-lime-200"
                 onClick={handleLogout}
               >
                 Log out
@@ -51,7 +51,7 @@ export function ProfileScreen() {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-black/40 border-white/30 text-white/80 hover:bg-white/10 hover:text-white"
+                className="px-4 py-2 text-xs audiowide-regular tracking-[0.12em] uppercase bg-black/40 border border-lime-400/70 text-lime-300 hover:bg-lime-400/10 hover:text-lime-200"
                 onClick={() => {
                   // TODO: wire up to real profile editing UI
                   console.log("Edit profile clicked");
@@ -60,7 +60,14 @@ export function ProfileScreen() {
                 Edit profile
               </Button>
             </div>
-            <div className="h-[480px] md:h-[600px] flex items-center justify-center pt-6 md:pt-10">
+            {defaultProfile.tagline && (
+              <div className="relative z-20 pt-6 pb-1 flex justify-center">
+                <p className="text-xs md:text-sm text-neutral-200/85 text-center max-w-xl">
+                  {defaultProfile.tagline}
+                </p>
+              </div>
+            )}
+            <div className="h-[480px] md:h-[600px] flex items-center justify-center pt-0 md:pt-2">
               <RadialOrbitalProfileDemo />
             </div>
           </section>

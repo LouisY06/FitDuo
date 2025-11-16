@@ -42,7 +42,7 @@ export const defaultTimelineData = [
   },
   {
     id: 2,
-    title: "Training Stats",
+    title: "Stats",
     subtitle: "Last 30 days",
     content:
       "24 sessions • 6 matchmade partners • Avg 18 min per battle • Personal best: 132 squats in 3 minutes.",
@@ -54,7 +54,7 @@ export const defaultTimelineData = [
   },
   {
     id: 3,
-    title: "Matchmaking Style",
+    title: "Match Pref",
     subtitle: "Preferred partners",
     content:
       "Prefers partners with similar intensity levels and clear rep counting. Enjoys light trash talk and positive feedback between sets.",
