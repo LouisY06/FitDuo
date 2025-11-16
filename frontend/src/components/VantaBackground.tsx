@@ -1,27 +1,20 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import * as THREE from "three";
+import RINGS from "vanta/dist/vanta.rings.min.js";
 
 type VantaBackgroundProps = {
   children?: ReactNode;
 };
-
-declare global {
-  interface Window {
-    VANTA: {
-      RINGS: (options: any) => { destroy: () => void };
-    };
-    THREE: any;
-  }
-}
 
 export function VantaBackground({ children }: VantaBackgroundProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [vantaEffect, setVantaEffect] = useState<any>(null);
 
   useEffect(() => {
-    if (!vantaEffect && containerRef.current && window.VANTA && window.THREE) {
-      const effect = window.VANTA.RINGS({
+    if (!vantaEffect && containerRef.current) {
+      const effect = RINGS({
         el: containerRef.current,
-        THREE: window.THREE,
+        THREE,
         mouseControls: true,
         touchControls: true,
         gyroControls: false,

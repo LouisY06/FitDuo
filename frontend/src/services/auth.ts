@@ -62,25 +62,44 @@ export interface AuthResponse {
  * Get Firebase ID token for authenticated user
  */
 async function getIdToken(): Promise<string | null> {
+  console.log("🔑 getIdToken() called");
   if (!auth) {
+    console.warn("⚠️ Firebase auth not initialized, checking localStorage...");
     // Fallback to localStorage token if auth not initialized
     const token = localStorage.getItem("auth_token");
-    if (token) return token;
+    if (token) {
+      console.log("✅ Found token in localStorage (auth not initialized)");
+      return token;
+    }
+    console.error("❌ No token found in localStorage and auth not initialized");
     return null;
   }
   const user = auth.currentUser;
   if (!user) {
+    console.warn("⚠️ No current Firebase user, checking localStorage...");
     // Fallback to localStorage token if no current user
     const token = localStorage.getItem("auth_token");
-    if (token) return token;
+    if (token) {
+      console.log("✅ Found token in localStorage (no current user)");
+      return token;
+    }
+    console.error("❌ No token found in localStorage and no current user");
     return null;
   }
   try {
-    return await user.getIdToken();
-  } catch (error) {
+    console.log("✅ Getting fresh token from Firebase user");
+    const token = await user.getIdToken();
+    console.log("✅ Got Firebase token successfully");
+    return token;
+  } catch (error: any) {
+    console.error("❌ Failed to get token from Firebase user:", error);
     // If getting token fails, try localStorage
     const token = localStorage.getItem("auth_token");
-    if (token) return token;
+    if (token) {
+      console.log("✅ Fallback: Found token in localStorage");
+      return token;
+    }
+    console.error("❌ No token found anywhere");
     return null;
   }
 }
@@ -365,14 +384,18 @@ export async function getCurrentUser(): Promise<AuthResponse["user"]> {
 
     const data = await response.json();
     return data;
-  } catch (error) {
+  } catch (error: any) {
+    console.error("❌ getCurrentUser error:", error);
+    console.error("❌ Error message:", error?.message);
+    console.error("❌ Error status:", error?.status);
     if ((error as ApiError).status) {
       throw error;
     }
-    throw {
-      message: "Network error. Please check your connection.",
-      status: 0,
-    } as ApiError;
+    const networkError: ApiError = {
+      message: error?.message || "Network error. Please check your connection.",
+      status: error?.status || 0,
+    };
+    throw networkError;
   }
 }
 

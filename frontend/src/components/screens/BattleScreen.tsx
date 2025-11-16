@@ -67,9 +67,11 @@ export function BattleScreen({ onNavigateToProfile: _onNavigateToProfile }: { on
     try {
       await startSearching();
       console.log("Matchmaking started successfully");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to start matchmaking:", err);
-      alert(`Failed to start matchmaking: ${(err as any)?.message || "Unknown error"}`);
+      const errorMessage = err?.message || err?.toString() || "Unknown error";
+      console.error("Error details:", errorMessage);
+      alert(`Failed to start matchmaking: ${errorMessage}`);
     }
   };
 

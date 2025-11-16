@@ -60,8 +60,10 @@ export function useMatchmaking(
         } else {
           console.warn("⚠️ User ID not found in user object:", user);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("❌ Error fetching current user:", err);
+        console.error("❌ Error message:", err?.message || err?.toString() || JSON.stringify(err));
+        console.error("❌ Error status:", err?.status);
       }
     };
     fetchUser();
@@ -129,9 +131,12 @@ export function useMatchmaking(
             console.error("❌ User ID not found in user object:", user);
             throw new Error("User ID not found");
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error("❌ Failed to get user ID:", err);
-          throw new Error("Please log in to start matchmaking");
+          console.error("❌ Error message:", err?.message || err?.toString() || JSON.stringify(err));
+          console.error("❌ Error status:", err?.status);
+          const errorMessage = err?.message || "Please log in to start matchmaking";
+          throw new Error(errorMessage);
         }
       } else {
         console.log("✅ Player ID already set:", playerIdRef.current);
@@ -166,10 +171,17 @@ export function useMatchmaking(
 
       // Store interval for cleanup
       (startSearching as any).pollInterval = pollInterval;
-    } catch (err) {
-      const apiError = err as { message?: string };
-      setError(apiError.message || "Failed to join matchmaking queue");
+    } catch (err: any) {
+      const apiError = err as { message?: string; status?: number };
+      const errorMessage = apiError.message || "Failed to join matchmaking queue";
+      console.error("❌ startSearching error:", errorMessage);
+      console.error("❌ Error object:", err);
+      console.error("❌ Error status:", apiError.status);
+      setError(errorMessage);
       setIsSearching(false);
+      setLoading(false);
+      // Re-throw the error so the caller knows it failed
+      throw err;
     } finally {
       setLoading(false);
     }
