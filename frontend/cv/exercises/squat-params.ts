@@ -375,7 +375,7 @@ export function checkKneeAlignment(landmarks: PoseLandmark[]): {
  * @param landmarks - Array of pose landmarks
  * @returns Object with posture status
  */
-export function checkTorsoPosture(landmarks: PoseLandmark[]): {
+export function checkTorsoPosture(_landmarks: PoseLandmark[]): {
   isValid: boolean;
   error?: string;
 } {
