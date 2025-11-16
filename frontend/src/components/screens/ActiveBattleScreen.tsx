@@ -610,9 +610,17 @@ export function ActiveBattleScreen() {
       return;
     }
     
-    // Update currentRound to the round we're starting
-    setCurrentRound(round);
-    console.log(`📊 Updated currentRound to ${round}`);
+    // CRITICAL: Only update currentRound if the new round is >= current round
+    // This prevents resetting rounds backwards (e.g., Round 3 -> Round 2)
+    setCurrentRound((prevRound) => {
+      if (round >= prevRound) {
+        console.log(`✅ Updating round from ${prevRound} to ${round} (ROUND_START)`);
+        return round;
+      } else {
+        console.warn(`⚠️ Ignoring ROUND_START: trying to go from Round ${prevRound} to Round ${round} (not allowing backwards progression)`);
+        return prevRound;
+      }
+    });
     // CRITICAL: Hide exercise selection/waiting screen immediately for both players
     setShowExerciseSelection(false);
     setShowRoundEnd(false);
@@ -735,9 +743,19 @@ export function ActiveBattleScreen() {
     // Ensure we're progressing to the next round (not looping)
     const nextRound = roundThatJustEnded + 1;
     console.log(`✅ Game continues to next round. Round ${roundThatJustEnded} ended, moving to Round ${nextRound}`);
+    console.log(`📊 Current round state before update: ${currentRound}, nextRound: ${nextRound}`);
     
     // Update currentRound to the next round to ensure proper progression
-    setCurrentRound(nextRound);
+    // CRITICAL: Use functional update to ensure we're using the latest state
+    setCurrentRound((prevRound) => {
+      if (nextRound > prevRound) {
+        console.log(`✅ Updating currentRound from ${prevRound} to ${nextRound} (round end)`);
+        return nextRound;
+      } else {
+        console.warn(`⚠️ Round end: nextRound ${nextRound} is not greater than currentRound ${prevRound}, keeping currentRound`);
+        return prevRound;
+      }
+    });
     
     // Determine who chooses next: loser chooses, or if tie, alternate
     let nextChooser: number | null = null;
@@ -760,11 +778,13 @@ export function ActiveBattleScreen() {
     setTimeout(() => {
       setShowRoundEnd(false);
       setSelectedExercise(null);
+      // Reset game phase to ready so the exercise selection screen can show
+      setGamePhase("ready");
       // Backend will increment round number in next GAME_STATE update
       // Show exercise selection screen for both players
       // One will see the selection UI, the other will see the waiting screen
       setShowExerciseSelection(true);
-      console.log(`🎮 Showing exercise selection for Round ${nextRound}`);
+      console.log(`🎮 Showing exercise selection for Round ${nextRound} (gamePhase set to ready)`);
     }, 5000); // Show round end screen for 5 seconds
   }, [currentRound, whoseTurnToChoose, playerId, gameState, userRoundsWon, opponentRoundsWon]);
 
