@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { MatchmakingStats } from "../MatchmakingStats";
 import { ElectricButton } from "../ElectricButton";
@@ -13,26 +13,27 @@ export function BattleScreen() {
   const [countdown, setCountdown] = useState<number | null>(null);
 
   // Wrap onMatchFound in useCallback to prevent WebSocket reconnections
-  const handleMatchFound = useCallback((payload: MatchFoundPayload) => {
-    console.log("Match found!", payload);
-    // Start countdown
-    let cd = 3;
-    setCountdown(cd);
-    const interval = setInterval(() => {
-      cd--;
-      if (cd > 0) {
-        setCountdown(cd);
-      } else {
-        clearInterval(interval);
-        setCountdown(null);
-        // Show simple battle placeholder
-        console.log("🚀 Match found! Game ID:", payload.game_id);
-        console.log("🎮 Opponent:", payload.opponent_name);
-        alert(`Match found!\nGame ID: ${payload.game_id}\nVS: ${payload.opponent_name}\n\nBattle UI coming soon! 🎮`);
-        // Stay on matchmaking screen for now
-      }
-    }, 1000);
-  }, [navigate]);
+  const handleMatchFound = useCallback(
+    (payload: MatchFoundPayload) => {
+      console.log("Match found!", payload);
+      // Start countdown
+      let cd = 3;
+      setCountdown(cd);
+      const interval = setInterval(() => {
+        cd--;
+        if (cd > 0) {
+          setCountdown(cd);
+        } else {
+          clearInterval(interval);
+          setCountdown(null);
+          // Navigate to battle screen with gameId in the URL
+          console.log("🚀 Match found! Game ID:", payload.game_id);
+          navigate(`/app/battle/${payload.game_id}`);
+        }
+      }, 1000);
+    },
+    [navigate]
+  );
 
   const {
     isSearching,
@@ -76,35 +77,33 @@ export function BattleScreen() {
   // }, [isSearching, stopSearching]);
 
   if (countdown !== null) {
+    // Countdown screen: no halo; focus user on upcoming battle
     return (
-      <>
-        <VantaHaloBackground />
-        <div
-          style={{
-            height: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "white",
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
-          <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                fontSize: "8rem",
-                fontFamily: "VT323, monospace",
-                color: "#63ff00",
-                fontWeight: "bold",
-              }}
-            >
-              {countdown}
-            </div>
-            <p style={{ fontSize: "1.5rem", opacity: 0.8 }}>Get ready!</p>
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "white",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              fontSize: "8rem",
+              fontFamily: "VT323, monospace",
+              color: "#63ff00",
+              fontWeight: "bold",
+            }}
+          >
+            {countdown}
           </div>
+          <p style={{ fontSize: "1.5rem", opacity: 0.8 }}>Get ready!</p>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -113,7 +112,7 @@ export function BattleScreen() {
 
   return (
     <>
-      <VantaHaloBackground />
+      {isSearching && <VantaHaloBackground />}
       <div className="matchmaking-page">
         {isSearching ? (
           <div className="matchmaking-loading-container">
@@ -170,23 +169,25 @@ export function BattleScreen() {
                 <MatchmakingStats tier="Silver" mmr={1250} winRate={62} avgReps={38} />
               </div>
 
-              {/* Right Column - Explanation Card with Halo Integration */}
+              {/* Right Column - Ready to battle CTA */}
               <div className="matchmaking-right">
-                <div className="matchmaking-explanation-card">
-                  <p className="matchmaking-explanation-text">
-                    We use your tier, win rate, and average reps to match you with
-                    players at a similar level.
-                  </p>
+                <div className="matchmaking-cta-card">
+                  <div>
+                    <h2 className="matchmaking-cta-title">Ready to battle?</h2>
+                    <p className="matchmaking-cta-subtitle">
+                      Jump into a live 1-minute rep race against a matched rival.
+                    </p>
+                  </div>
+                  <div className="matchmaking-cta-row">
+                    <ElectricButton onClick={handleFindRival} disabled={loading}>
+                      {loading ? "Joining queue..." : "Find a Rival"}
+                    </ElectricButton>
+                  </div>
                 </div>
               </div>
             </section>
 
-            {/* CTA Section - Button centered under right column */}
-            <div className="matchmaking-cta">
-              <ElectricButton onClick={handleFindRival} disabled={loading}>
-                {loading ? "Joining queue..." : "Find a Rival"}
-              </ElectricButton>
-            </div>
+            {/* Bottom CTA row no longer needed; button lives in right card */}
           </>
         )}
       </div>

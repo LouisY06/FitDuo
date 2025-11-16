@@ -20,7 +20,8 @@ export default function VantaHaloBackground() {
         backgroundColor: 0x000000,
         amplitudeFactor: 1.5,
         xOffset: 0.1,
-        yOffset: 0.2,
+        // Push the halo slightly lower so it sits behind the stats instead of the header
+        yOffset: 0.35,
       });
       setVantaEffect(effect);
     }

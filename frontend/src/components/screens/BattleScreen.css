@@ -24,7 +24,7 @@
 /* Header Section */
 .matchmaking-header {
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: 2.25rem;
 }
 
 .matchmaking-title {
@@ -60,10 +60,10 @@
 .matchmaking-hero {
   display: flex;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: space-between;
   gap: 4rem;
   max-width: 1200px;
-  margin: 2rem auto 0;
+  margin: 1rem auto 0;
   padding-inline: 1.5rem;
   position: relative;
   z-index: 2;
@@ -80,68 +80,70 @@
   position: relative;
   z-index: 2;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   overflow: visible;
-  padding-right: 1rem;
+  padding-right: 0;
   box-sizing: border-box;
+  /* Slight lift so cards sit nicely over halo rings */
+  transform: translateY(-16px);
 }
 
 /* Right Column - Explanation Card with Halo Integration */
 .matchmaking-right {
   flex: 1 1 360px;
-  max-width: 480px;
+  max-width: 520px;
   min-width: 0;
   position: relative;
   z-index: 2;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
 }
 
-.matchmaking-explanation-card {
-  position: relative;
-  z-index: 2;
-  background: rgba(17, 24, 39, 0.7);
-  backdrop-filter: blur(20px);
-  border-radius: 20px;
-  border: 1px solid rgba(99, 255, 0, 0.2);
-  padding: 2rem 2.5rem;
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 0 20px rgba(99, 255, 0, 0.05);
-  transition: all 0.3s ease;
-  width: 100%;
-  max-width: 480px;
-  box-sizing: border-box;
-}
-
-.matchmaking-explanation-card:hover {
-  border-color: rgba(99, 255, 0, 0.4);
-  background: rgba(17, 24, 39, 0.8);
-  box-shadow: 
-    0 12px 40px rgba(0, 0, 0, 0.5),
-    inset 0 0 30px rgba(99, 255, 0, 0.1),
-    0 0 20px rgba(99, 255, 0, 0.2);
-}
-
-.matchmaking-explanation-text {
-  font-size: 1rem;
-  line-height: 1.7;
-  margin: 0;
-  color: rgba(255, 255, 255, 0.9);
-  text-align: center;
-}
-
-/* CTA Section - Button centered */
-.matchmaking-cta {
+.matchmaking-cta-card {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
-  margin-top: 2rem;
-  padding: 0;
-  position: relative;
-  z-index: 2;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 20px;
+  border: 1px solid rgba(99, 255, 0, 0.12);
+  /* Softer, more transparent glass card over a blurred background */
+  background: radial-gradient(circle at top left, rgba(99, 255, 0, 0.04), transparent 55%),
+    rgba(3, 7, 18, 0.5);
+  backdrop-filter: blur(22px);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.65),
+    0 0 26px rgba(99, 255, 0, 0.1);
+  padding: 1.75rem 1.75rem 1.5rem 1.75rem;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  box-sizing: border-box;
+  /* Shift card 130px down and 100px to the right for final placement */
+  margin-top: 130px;
+  margin-left: 100px;
+}
+
+.matchmaking-cta-title {
+  margin: 0 0 0.35rem 0;
+  font-family: "Audiowide", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: #e4ffec;
+}
+
+.matchmaking-cta-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.matchmaking-cta-row {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* Loading State Container */

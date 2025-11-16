@@ -5,36 +5,39 @@
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding: 1rem;
-  height: 100%;
+  padding: 1rem 0;
+  height: auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   box-sizing: border-box;
 }
 
 .stats-title {
-  margin: 0 0 1.5rem 0;
+  /* Visually drop the title while keeping the cards in place */
+  margin: 50px 0 1.25rem 0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #63ff00;
   font-family: "Audiowide", sans-serif;
-  text-align: center;
+  text-align: left;
   text-shadow: 0 0 10px rgba(99, 255, 0, 0.5);
 }
 
 .stats-cards-wrapper {
   width: 100%;
-  max-width: 100%;
-  height: 100%;
-  min-height: 300px;
+  max-width: 420px;
+  height: auto;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   position: relative;
   overflow: visible;
-  padding: 1rem;
+  padding: 0.5rem 0;
+  /* Counter the title margin so cards stay anchored */
+  margin-top: -50px;
   box-sizing: border-box;
 }
 

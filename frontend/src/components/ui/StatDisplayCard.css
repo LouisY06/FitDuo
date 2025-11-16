@@ -16,6 +16,9 @@
   padding: 12px 16px;
   transition: all 0.7s ease;
   box-sizing: border-box;
+  z-index: 1;
+  /* Ensure inner glow / gradient respects rounded corners */
+  overflow: hidden;
 }
 
 .stat-display-card::after {
@@ -31,6 +34,7 @@
     transparent 100%
   );
   pointer-events: none;
+  border-radius: inherit;
 }
 
 .stat-display-card:hover {
@@ -113,6 +117,7 @@
 .stat-display-card.stack-1:hover {
   transform: skewY(-8deg) translateY(-40px);
   filter: grayscale(0%);
+  z-index: 10;
 }
 
 .stat-display-card.stack-1:hover::before {
@@ -144,6 +149,7 @@
 .stat-display-card.stack-2:hover {
   transform: skewY(-8deg) translateX(64px) translateY(-4px);
   filter: grayscale(0%);
+  z-index: 10;
 }
 
 .stat-display-card.stack-2:hover::before {
@@ -175,6 +181,7 @@
 .stat-display-card.stack-3:hover {
   transform: skewY(-8deg) translateX(128px) translateY(40px);
   filter: grayscale(0%);
+  z-index: 10;
 }
 
 .stat-display-card.stack-3:hover::before {
@@ -206,6 +213,7 @@
 .stat-display-card.stack-4:hover {
   transform: skewY(-8deg) translateX(192px) translateY(80px);
   filter: grayscale(0%);
+  z-index: 10;
 }
 
 .stat-display-card.stack-4:hover::before {
