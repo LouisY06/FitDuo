@@ -51,9 +51,13 @@ export function ExerciseTester() {
       if (!videoRef.current || !canvasRef.current) return;
 
       try {
-        // Get webcam stream
+        // Get webcam stream with mobile-friendly constraints
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480 },
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: "user", // Front-facing camera on mobile
+          },
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;

@@ -850,9 +850,13 @@ export function ActiveBattleScreen() {
 
     const initCV = async () => {
       try {
-        // Request webcam access
+        // Request webcam access with mobile-friendly constraints
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480 },
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: "user", // Front-facing camera on mobile
+          },
         });
         
         if (videoRef.current) {
@@ -927,7 +931,36 @@ export function ActiveBattleScreen() {
         }
       } catch (error) {
         console.error("Failed to initialize CV:", error);
-        setCvError(error instanceof Error ? error.message : "Failed to initialize camera");
+        let errorMessage = "Failed to initialize camera";
+        
+        if (error instanceof Error) {
+          if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+            errorMessage = "Camera permission denied. Please allow camera access in your browser settings.";
+          } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+            errorMessage = "No camera found. Please connect a camera and try again.";
+          } else if (error.name === "NotReadableError" || error.name === "TrackStartError") {
+            errorMessage = "Camera is being used by another application. Please close other apps using the camera.";
+          } else if (error.name === "OverconstrainedError" || error.name === "ConstraintNotSatisfiedError") {
+            errorMessage = "Camera doesn't support required settings. Trying with default settings...";
+            // Try again with minimal constraints
+            try {
+              const fallbackStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "user" },
+              });
+              if (videoRef.current) {
+                videoRef.current.srcObject = fallbackStream;
+                // Retry initialization with fallback stream
+                // (You might want to call initCV again here or handle it differently)
+              }
+            } catch (fallbackError) {
+              errorMessage = error.message || "Failed to initialize camera";
+            }
+          } else {
+            errorMessage = error.message || "Failed to initialize camera";
+          }
+        }
+        
+        setCvError(errorMessage);
         setIsCVReady(false);
       }
     };

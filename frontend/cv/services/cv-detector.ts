@@ -85,10 +85,14 @@ export class CVDetector {
       "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
     );
 
+    // Detect if we're on mobile and use CPU delegate for better compatibility
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const useGPU = !isMobile; // Use GPU on desktop, CPU on mobile for better compatibility
+    
     this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
-        delegate: "GPU",
+        delegate: useGPU ? "GPU" : "CPU",
       },
       runningMode: "VIDEO",
       numPoses: 1,
