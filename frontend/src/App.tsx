@@ -18,6 +18,9 @@ const AppShell = lazy(() =>
 const InfoPage = lazy(() => 
   import("./components/InfoPage").then(module => ({ default: module.InfoPage }))
 );
+const ExerciseTester = lazy(() => 
+  import("../cv/exercises/ExerciseTester").then(module => ({ default: module.ExerciseTester }))
+);
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -88,6 +91,14 @@ function App() {
                   <InfoPage />
                 </Suspense>
               </VantaBackground>
+            }
+          />
+          <Route
+            path="/cv-test"
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <ExerciseTester />
+              </Suspense>
             }
           />
           <Route path="/" element={<Navigate to="/login" replace />} />

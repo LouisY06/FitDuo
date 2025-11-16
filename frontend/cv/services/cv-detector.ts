@@ -22,6 +22,8 @@ import type {
   FormErrorCallback,
   DetectionUpdateCallback,
 } from "../types/cv";
+import { validatePushupForm, calculateElbowAngle, PUSHUP_REP_PARAMS } from "../exercises/pushup-params";
+import { validateSquatForm, calculateKneeAngle, SQUAT_REP_PARAMS } from "../exercises/squat-params";
 
 export class CVDetector {
   private poseLandmarker: PoseLandmarker | null = null;
@@ -326,83 +328,111 @@ export class CVDetector {
   }
 
   private detectPushUp(landmarks: PoseLandmark[]): void {
-    // MediaPipe pose landmark indices
-    const LEFT_SHOULDER = 11;
-    const LEFT_ELBOW = 13;
-    const LEFT_WRIST = 15;
-    const RIGHT_SHOULDER = 12;
-    const RIGHT_ELBOW = 14;
-    const RIGHT_WRIST = 16;
+    // Calculate elbow angle first to pass to form validation
+    const elbowAngle = calculateElbowAngle(landmarks);
+    if (elbowAngle === null) {
+      return; // Can't calculate angle
+    }
 
-    // Calculate elbow angle for both arms (use average)
-    const leftAngle = this.calculateAngle(
-      landmarks[LEFT_SHOULDER],
-      landmarks[LEFT_ELBOW],
-      landmarks[LEFT_WRIST]
-    );
-    const rightAngle = this.calculateAngle(
-      landmarks[RIGHT_SHOULDER],
-      landmarks[RIGHT_ELBOW],
-      landmarks[RIGHT_WRIST]
-    );
-    const avgAngle = (leftAngle + rightAngle) / 2;
+    // Validate form with elbow angle for movement-aware leniency
+    // More lenient during downward motion to allow natural movement
+    const formValidation = validatePushupForm(landmarks, elbowAngle);
+    if (!formValidation.isValid) {
+      // Form is invalid - don't count reps, but still track angle for display
+      this.repState.lastAngle = elbowAngle;
+      return;
+    }
 
-    // Get form rules (default: min 90 degrees for down position)
-    const minAngle = this.formRules.elbow_angle?.min ?? 90;
-    const maxAngle = this.formRules.elbow_angle?.max ?? 180;
+    // Form is valid - proceed with rep detection
 
-    // Detect rep cycle: down (angle < min) -> up (angle > max)
-    if (!this.repState.isDown && avgAngle < minAngle) {
+    // Use push-up specific parameters for rep detection
+    // Going down: angle < BOTTOM_ANGLE_MAX (100°)
+    // Coming up: angle > TOP_ANGLE_MIN (160°)
+    const bottomAngle = PUSHUP_REP_PARAMS.BOTTOM_ANGLE_MAX; // 100° - going down threshold
+    const topAngle = PUSHUP_REP_PARAMS.TOP_ANGLE_MIN; // 160° - coming up threshold
+
+    // Detect rep cycle: 
+    // 1. Start at top (angle > 160°)
+    // 2. Go down (angle < 100°) -> set isDown = true
+    // 3. Come back up (angle > 160°) -> count rep and set isDown = false
+    
+    if (!this.repState.isDown && elbowAngle < bottomAngle) {
+      // Just went down - mark as down
       this.repState.isDown = true;
-    } else if (this.repState.isDown && avgAngle > maxAngle) {
-      this.repState.isDown = false;
-      this.repState.repCount++;
-      if (this.onRepDetected) {
-        this.onRepDetected(this.repState.repCount);
+      console.log(`📉 Going down - angle: ${elbowAngle.toFixed(1)}°`);
+    } else if (this.repState.isDown && elbowAngle > topAngle) {
+      // Just came back up - count the rep!
+      // Validate form at the top to ensure good form
+      const topFormValidation = validatePushupForm(landmarks, elbowAngle);
+      if (topFormValidation.isValid) {
+        this.repState.isDown = false;
+        this.repState.repCount++;
+        console.log(`✅ Rep ${this.repState.repCount} completed!`);
+        if (this.onRepDetected) {
+          this.onRepDetected(this.repState.repCount);
+        }
+      } else {
+        // Form became invalid at top - reset but don't count
+        console.log(`⚠️ Form invalid at top - rep not counted`);
+        this.repState.isDown = false;
       }
     }
 
-    this.repState.lastAngle = avgAngle;
+    this.repState.lastAngle = elbowAngle;
   }
 
   private detectSquat(landmarks: PoseLandmark[]): void {
-    // MediaPipe pose landmark indices
-    const LEFT_HIP = 23;
-    const LEFT_KNEE = 25;
-    const LEFT_ANKLE = 27;
-    const RIGHT_HIP = 24;
-    const RIGHT_KNEE = 26;
-    const RIGHT_ANKLE = 28;
+    // Calculate knee angle first to pass to form validation
+    const kneeAngle = calculateKneeAngle(landmarks);
+    if (kneeAngle === null) {
+      return; // Can't calculate angle
+    }
 
-    // Calculate knee angle for both legs (use average)
-    const leftAngle = this.calculateAngle(
-      landmarks[LEFT_HIP],
-      landmarks[LEFT_KNEE],
-      landmarks[LEFT_ANKLE]
-    );
-    const rightAngle = this.calculateAngle(
-      landmarks[RIGHT_HIP],
-      landmarks[RIGHT_KNEE],
-      landmarks[RIGHT_ANKLE]
-    );
-    const avgAngle = (leftAngle + rightAngle) / 2;
+    // Validate form with knee angle for movement-aware leniency
+    // More lenient during downward motion to allow natural movement
+    const formValidation = validateSquatForm(landmarks, kneeAngle);
+    if (!formValidation.isValid) {
+      // Form is invalid - don't count reps, but still track angle for display
+      this.repState.lastAngle = kneeAngle;
+      return;
+    }
 
-    // Get form rules (default: min 90 degrees for down position in squat)
-    const minAngle = this.formRules.knee_angle?.min ?? 90;
-    const maxAngle = this.formRules.knee_angle?.max ?? 180;
+    // Form is valid - proceed with rep detection
 
-    // Detect rep cycle: down (angle < min) -> up (angle > max)
-    if (!this.repState.isDown && avgAngle < minAngle) {
+    // Use squat specific parameters for rep detection
+    // Going down: angle < KNEE_ANGLE_MAX (90°)
+    // Coming up: angle > 160° (near full extension)
+    const bottomAngle = SQUAT_REP_PARAMS.KNEE_ANGLE_MAX; // 90° - going down threshold
+    const topAngle = 160; // 160° - coming up threshold (near full extension)
+
+    // Detect rep cycle: 
+    // 1. Start at top (angle > 160°)
+    // 2. Go down (angle < 90°) -> set isDown = true
+    // 3. Come back up (angle > 160°) -> count rep and set isDown = false
+    
+    if (!this.repState.isDown && kneeAngle < bottomAngle) {
+      // Just went down - mark as down
       this.repState.isDown = true;
-    } else if (this.repState.isDown && avgAngle > maxAngle) {
-      this.repState.isDown = false;
-      this.repState.repCount++;
-      if (this.onRepDetected) {
-        this.onRepDetected(this.repState.repCount);
+      console.log(`📉 Squat going down - angle: ${kneeAngle.toFixed(1)}°`);
+    } else if (this.repState.isDown && kneeAngle > topAngle) {
+      // Just came back up - count the rep!
+      // Validate form at the top to ensure good form
+      const topFormValidation = validateSquatForm(landmarks, kneeAngle);
+      if (topFormValidation.isValid) {
+        this.repState.isDown = false;
+        this.repState.repCount++;
+        console.log(`✅ Squat rep ${this.repState.repCount} completed!`);
+        if (this.onRepDetected) {
+          this.onRepDetected(this.repState.repCount);
+        }
+      } else {
+        // Form became invalid at top - reset but don't count
+        console.log(`⚠️ Form invalid at top - rep not counted`);
+        this.repState.isDown = false;
       }
     }
 
-    this.repState.lastAngle = avgAngle;
+    this.repState.lastAngle = kneeAngle;
   }
 
   private detectSitUp(landmarks: PoseLandmark[]): void {
