@@ -1,4 +1,5 @@
 import axios from "axios";
+import { auth } from "../config/firebase";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 
@@ -10,8 +11,18 @@ const api = axios.create({
   },
 });
 
-// Log API requests for debugging
-api.interceptors.request.use((config) => {
+// Add Firebase auth token to all requests
+api.interceptors.request.use(async (config) => {
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (error) {
+    console.warn("⚠️ Failed to get Firebase token:", error);
+  }
+  
   console.log(`📡 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
   return config;
 });
