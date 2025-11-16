@@ -400,10 +400,10 @@ function checkLegAlignment(
     ? distanceToLine / legLength 
     : distanceToLine;
 
-  // Threshold: knee must be within 7% of leg length from straight line (slightly more lenient)
-  // More lenient during downward motion (10%) to allow natural movement
+  // Threshold: knee must be within 8% of leg length from straight line (slightly more lenient)
+  // More lenient during downward motion (12%) to allow natural movement
   // This ensures the hip-knee-ankle line is "completely straight" at rest
-  const threshold = isGoingDown ? 0.10 : 0.07; // 10% when going down, 7% otherwise (increased from 8%/5%)
+  const threshold = isGoingDown ? 0.12 : 0.08; // 12% when going down, 8% otherwise (increased for more leniency)
   const isValid = relativeDeviation < threshold;
 
   // Convert to angle deviation for display

@@ -20,7 +20,7 @@ import {
   calculateKneeAngle,
   checkHipDepth,
   checkKneeAlignment,
-  checkSideView as checkSquatSideView,
+  checkFrontView as checkSquatFrontView,
   validateSquatForm,
 } from "./squat-params";
 import {
@@ -186,13 +186,13 @@ export function ExerciseTester() {
         const kneeAngle = calculateKneeAngle(landmarks);
         // Pass knee angle to form validation for movement-aware leniency
         const formValidation = validateSquatForm(landmarks, kneeAngle);
-        const sideView = checkSquatSideView(landmarks);
+        const frontView = checkSquatFrontView(landmarks);
         const hipDepth = checkHipDepth(landmarks);
         const kneeAlign = checkKneeAlignment(landmarks);
         
         return {
           "Knee Angle": kneeAngle !== null ? `${kneeAngle.toFixed(1)}°` : "N/A (landmarks not visible)",
-          "Side View": sideView.isValid ? "✅" : "❌",
+          "Facing Camera": frontView.isValid ? "✅" : "❌",
           "Hip Depth": hipDepth.isValid ? "✅ Below Knee" : "❌ Above Knee",
           "Knee Alignment": kneeAlign.isValid ? "✅" : "❌",
           "Form Valid": formValidation.isValid ? "✅" : "❌",

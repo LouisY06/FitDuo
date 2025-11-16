@@ -24,6 +24,9 @@ export interface RepDetectionState {
   repCount: number;
   isDown: boolean;
   lastAngle: number;
+  lastHipY?: number; // For squat tracking (hip Y position)
+  startingHipY?: number; // Starting hip Y position for squat
+  bottomHipY?: number; // Deepest hip Y position reached (for squat - must reach this to count rep)
 }
 
 export interface StaticHoldState {

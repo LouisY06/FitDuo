@@ -23,7 +23,7 @@ import type {
   DetectionUpdateCallback,
 } from "../types/cv";
 import { validatePushupForm, calculateElbowAngle, PUSHUP_REP_PARAMS } from "../exercises/pushup-params";
-import { validateSquatForm, calculateKneeAngle, SQUAT_REP_PARAMS } from "../exercises/squat-params";
+import { validateSquatForm, calculateKneeAngle, getHipYPosition, getKneeYPosition, isHipCloseToKnees, checkStandingForm, SQUAT_REP_PARAMS } from "../exercises/squat-params";
 
 export class CVDetector {
   private poseLandmarker: PoseLandmarker | null = null;
@@ -259,6 +259,9 @@ export class CVDetector {
       repCount: 0,
       isDown: false,
       lastAngle: 0,
+      lastHipY: undefined,
+      startingHipY: undefined,
+      bottomHipY: undefined,
     };
   }
 
@@ -382,57 +385,124 @@ export class CVDetector {
   }
 
   private detectSquat(landmarks: PoseLandmark[]): void {
-    // Calculate knee angle first to pass to form validation
-    const kneeAngle = calculateKneeAngle(landmarks);
-    if (kneeAngle === null) {
-      return; // Can't calculate angle
+    // Get current hip Y position for tracking
+    const currentHipY = getHipYPosition(landmarks);
+    if (currentHipY === null) {
+      return; // Can't get hip position
     }
 
-    // Validate form with knee angle for movement-aware leniency
-    // More lenient during downward motion to allow natural movement
-    const formValidation = validateSquatForm(landmarks, kneeAngle);
-    if (!formValidation.isValid) {
-      // Form is invalid - don't count reps, but still track angle for display
-      this.repState.lastAngle = kneeAngle;
-      return;
-    }
-
-    // Form is valid - proceed with rep detection
-
-    // Use squat specific parameters for rep detection
-    // Going down: angle < KNEE_ANGLE_MAX (90°)
-    // Coming up: angle > 160° (near full extension)
-    const bottomAngle = SQUAT_REP_PARAMS.KNEE_ANGLE_MAX; // 90° - going down threshold
-    const topAngle = 160; // 160° - coming up threshold (near full extension)
-
-    // Detect rep cycle: 
-    // 1. Start at top (angle > 160°)
-    // 2. Go down (angle < 90°) -> set isDown = true
-    // 3. Come back up (angle > 160°) -> count rep and set isDown = false
-    
-    if (!this.repState.isDown && kneeAngle < bottomAngle) {
-      // Just went down - mark as down
-      this.repState.isDown = true;
-      console.log(`📉 Squat going down - angle: ${kneeAngle.toFixed(1)}°`);
-    } else if (this.repState.isDown && kneeAngle > topAngle) {
-      // Just came back up - count the rep!
-      // Validate form at the top to ensure good form
-      const topFormValidation = validateSquatForm(landmarks, kneeAngle);
-      if (topFormValidation.isValid) {
-        this.repState.isDown = false;
-        this.repState.repCount++;
-        console.log(`✅ Squat rep ${this.repState.repCount} completed!`);
-        if (this.onRepDetected) {
-          this.onRepDetected(this.repState.repCount);
-        }
+    // Initialize starting hip Y if not set (first frame or reset)
+    if (this.repState.startingHipY === undefined) {
+      // Check if standing (valid starting form)
+      const standingForm = checkStandingForm(landmarks);
+      if (standingForm.isValid) {
+        this.repState.startingHipY = currentHipY;
+        this.repState.lastHipY = currentHipY;
+        this.repState.bottomHipY = undefined; // Reset bottom tracking
+        console.log(`🏁 Squat starting position set - hip Y: ${currentHipY.toFixed(3)}`);
       } else {
-        // Form became invalid at top - reset but don't count
-        console.log(`⚠️ Form invalid at top - rep not counted`);
-        this.repState.isDown = false;
+        // Not standing yet - wait for valid starting position
+        return;
       }
     }
 
-    this.repState.lastAngle = kneeAngle;
+    // Calculate knee angle for form validation (optional, not used for rep detection)
+    const kneeAngle = calculateKneeAngle(landmarks);
+    
+    // Validate form (simplified - just check if facing camera and basic alignment)
+    const formValidation = validateSquatForm(landmarks, kneeAngle);
+    if (!formValidation.isValid) {
+      // Form is invalid - don't count reps, but still track hip position
+      this.repState.lastHipY = currentHipY;
+      if (kneeAngle !== null) {
+        this.repState.lastAngle = kneeAngle;
+      }
+      return;
+    }
+
+    // Form is valid - proceed with rep detection using hip-to-knee tracking
+
+    // Check if hip is close to knees
+    const hipKneeCheck = isHipCloseToKnees(landmarks);
+    const hipUpThreshold = SQUAT_REP_PARAMS.HIP_UP_THRESHOLD; // 8% of frame height (more lenient)
+    const hipReturnThreshold = SQUAT_REP_PARAMS.HIP_RETURN_THRESHOLD; // 12% of frame height (more lenient)
+
+    // Calculate how much hip has moved from starting position
+    const hipMovementFromStart = currentHipY - (this.repState.startingHipY || currentHipY);
+    const hipMovementFromLast = this.repState.lastHipY !== undefined 
+      ? currentHipY - this.repState.lastHipY 
+      : 0;
+
+    // Debug logging
+    const distanceStr = hipKneeCheck.distance ? (hipKneeCheck.distance * 100).toFixed(1) : "N/A";
+    const movementStr = (hipMovementFromStart * 100).toFixed(1);
+    
+    // Detect rep cycle (LENIENT - based on hip being close to knees):
+    // 1. Start at top (standing - hip Y close to starting position)
+    // 2. Go down until hip is close to knees -> set isDown = true
+    // 3. Come back up (hip moves up from bottom) -> count rep when back near starting position
+    
+    if (!this.repState.isDown) {
+      // Not in down position - check if hip is close to knees
+      if (hipKneeCheck.isClose) {
+        // Hip is close to knees - mark as down
+        this.repState.isDown = true;
+        this.repState.bottomHipY = currentHipY; // Track when hip was close to knees
+        console.log(`📉 Squat going down - hip close to knees (distance: ${distanceStr}%, hip Y: ${currentHipY.toFixed(3)})`);
+      } else {
+        // Debug: log when not close yet
+        if (hipKneeCheck.distance !== undefined && hipKneeCheck.distance < 0.30) {
+          // Only log if getting close (within 30%) to avoid spam
+          console.log(`🔍 Squat tracking - hip not close yet (distance: ${distanceStr}%, movement: ${movementStr}%)`);
+        }
+      }
+    } else {
+      // In down position - track the deepest point (when hip was closest to knees)
+      if (this.repState.bottomHipY === undefined || currentHipY > this.repState.bottomHipY) {
+        // Update bottom position if we've gone deeper
+        this.repState.bottomHipY = currentHipY;
+      }
+      
+      // Check if coming back up (hip moving up from bottom position)
+      // More lenient: just check if hip is moving up significantly
+      if (this.repState.bottomHipY !== undefined) {
+        const movementFromBottom = currentHipY - this.repState.bottomHipY; // Negative = moving up
+        
+        // Check if hip has moved up from bottom
+        if (movementFromBottom < -hipUpThreshold) {
+          // Hip is moving up from bottom
+          console.log(`📈 Squat coming up - moved up ${(Math.abs(movementFromBottom) * 100).toFixed(1)}% from bottom, movement from start: ${movementStr}%`);
+          
+          // Check if back near starting position (more lenient)
+          if (Math.abs(hipMovementFromStart) < hipReturnThreshold) {
+            // Back near starting position - count the rep!
+            this.repState.isDown = false;
+            this.repState.repCount++;
+            console.log(`✅ Squat rep ${this.repState.repCount} completed! (hip was close to knees and returned to start)`);
+            if (this.onRepDetected) {
+              this.onRepDetected(this.repState.repCount);
+            }
+            // Reset for next rep
+            this.repState.startingHipY = currentHipY;
+            this.repState.bottomHipY = undefined;
+          } else {
+            // Coming up but not back to start yet
+            console.log(`⏳ Squat coming up but not at start yet (${Math.abs(hipMovementFromStart) * 100}% from start, need < ${hipReturnThreshold * 100}%)`);
+          }
+        } else {
+          // Still going down or at bottom
+          if (hipKneeCheck.isClose) {
+            console.log(`📉 Squat at bottom - hip still close to knees (distance: ${distanceStr}%)`);
+          }
+        }
+      }
+    }
+
+    // Update tracking
+    this.repState.lastHipY = currentHipY;
+    if (kneeAngle !== null) {
+      this.repState.lastAngle = kneeAngle;
+    }
   }
 
   private detectSitUp(landmarks: PoseLandmark[]): void {
