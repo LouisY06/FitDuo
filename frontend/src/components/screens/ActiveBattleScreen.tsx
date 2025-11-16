@@ -545,15 +545,20 @@ export function ActiveBattleScreen() {
       };
       const exercise = exerciseIdMap[state.exerciseId];
       if (exercise) {
-        // Always update exercise and hide selection screen when exercise is set
-        // This is important for the waiting player in round 2+
+        // Only update exercise if it's different
         if (exercise !== selectedExercise) {
           console.log(`✅ Exercise selected via GAME_STATE: ${exercise} (ID: ${state.exerciseId})`);
+          setSelectedExercise(exercise);
+          setShowExerciseSelection(false); // Hide waiting/exercise selection screen immediately
+          
+          // CRITICAL: Only set game phase to "ready" if we're NOT already in a live round
+          // This prevents resetting the timer and game phase mid-round
+          if (gamePhase !== "live" && gamePhase !== "countdown") {
+            setGamePhase("ready");
+          } else {
+            console.log(`⚠️ GAME_STATE received during live round - not changing game phase from ${gamePhase}`);
+          }
         }
-        setSelectedExercise(exercise);
-        setShowExerciseSelection(false); // Hide waiting/exercise selection screen immediately
-        // Set game phase to ready to ensure waiting screen condition fails
-        setGamePhase("ready");
       }
     }
     
@@ -582,7 +587,14 @@ export function ActiveBattleScreen() {
 
   const handleRoundStart = useCallback((round: number, exerciseId?: number) => {
     console.log(`🎮 Round ${round} starting with exercise ID: ${exerciseId}`);
-    console.log(`🎮 Current showExerciseSelection: ${showExerciseSelection}, selectedExercise: ${selectedExercise}`);
+    console.log(`🎮 Current showExerciseSelection: ${showExerciseSelection}, selectedExercise: ${selectedExercise}, gamePhase: ${gamePhase}`);
+    
+    // CRITICAL: Only process ROUND_START if we're not already in a live round
+    // This prevents resetting the timer mid-round
+    if (gamePhase === "live") {
+      console.warn(`⚠️ ROUND_START received but game is already live! Ignoring to prevent timer reset.`);
+      return;
+    }
     
     setCurrentRound(round);
     // CRITICAL: Hide exercise selection/waiting screen immediately for both players
@@ -590,9 +602,9 @@ export function ActiveBattleScreen() {
     setShowRoundEnd(false);
     setRoundEndData(null);
     
-    // Reset timers for new round
+    // Reset timers for new round (only if not already live)
     setCountdownRemaining(10);
-    setTimeRemaining(durationSeconds);
+    // Don't reset timeRemaining here - let the game timer useEffect handle it when phase becomes "live"
     
     // Map exercise ID to exercise type if provided
     // This is important for the waiting player who receives ROUND_START
@@ -610,6 +622,7 @@ export function ActiveBattleScreen() {
         // Force hide exercise selection screen (redundant but ensures it's hidden)
         setShowExerciseSelection(false);
         // Set game phase to ready so waiting screen condition fails
+        // The server will send COUNTDOWN_START when both players are ready
         setGamePhase("ready");
       } else {
         console.warn(`⚠️ Unknown exercise ID in ROUND_START: ${exerciseId}`);
@@ -624,8 +637,8 @@ export function ActiveBattleScreen() {
     setUserReps(0);
     setOpponentReps(0);
     lastSentRepCountRef.current = 0;
-    setLastRepTime(Date.now()); // Reset inactivity timer for new round
-  }, [durationSeconds, showExerciseSelection, selectedExercise]);
+    // Don't reset lastRepTime here - it will be reset when countdown completes
+  }, [durationSeconds, showExerciseSelection, selectedExercise, gamePhase]);
 
   const handleRoundEnd = useCallback((data: {
     winnerId: number | null;
