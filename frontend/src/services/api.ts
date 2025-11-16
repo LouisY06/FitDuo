@@ -14,9 +14,8 @@ const api = axios.create({
 // Add Firebase auth token to all requests
 api.interceptors.request.use(async (config) => {
   try {
-    const user = auth.currentUser;
-    if (user) {
-      const token = await user.getIdToken();
+    if (auth && auth.currentUser) {
+      const token = await auth.currentUser.getIdToken();
       config.headers.Authorization = `Bearer ${token}`;
     }
   } catch (error) {
@@ -81,6 +80,11 @@ export const apiPost = async <T = any>(url: string, data?: any): Promise<T> => {
 
 export const apiDelete = async <T = any>(url: string): Promise<T> => {
   const response = await api.delete(url);
+  return response.data;
+};
+
+export const apiPut = async <T = any>(url: string, data?: any): Promise<T> => {
+  const response = await api.put(url, data);
   return response.data;
 };
 

@@ -10,7 +10,7 @@ import { getCurrentUser } from "../../services/auth";
 import { userStatsAPI, type UserStats } from "../../services/api";
 import "./BattleScreen.css";
 
-export function BattleScreen({ onNavigateToProfile }: { onNavigateToProfile?: () => void }) {
+export function BattleScreen({ onNavigateToProfile: _onNavigateToProfile }: { onNavigateToProfile?: () => void }) {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState<number | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
