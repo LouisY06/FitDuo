@@ -1,8 +1,8 @@
 /**
  * Bodyweight Squat Exercise Parameters
  * 
- * Rep Detection: Based on hip depth (hip crease below knee) and knee angle (≤90°)
- * Form Check: Knee alignment, torso posture, heel contact, side view
+ * Rep Detection: Based on hip tracking (hip Y position)
+ * Form Check: Knee alignment, torso posture, front-facing (camera-facing)
  */
 
 import type { PoseLandmark } from "../types/cv";
@@ -37,13 +37,12 @@ export function areAllLandmarksVisible(landmarks: PoseLandmark[]): {
   isValid: boolean;
   missingLandmarks?: string[];
 } {
+  // Only require knee and above (ankles/toes not needed)
   const requiredIndices = [
     SQUAT_LANDMARKS.LEFT_HIP,
     SQUAT_LANDMARKS.RIGHT_HIP,
     SQUAT_LANDMARKS.LEFT_KNEE,
     SQUAT_LANDMARKS.RIGHT_KNEE,
-    SQUAT_LANDMARKS.LEFT_ANKLE,
-    SQUAT_LANDMARKS.RIGHT_ANKLE,
     SQUAT_LANDMARKS.LEFT_SHOULDER,
     SQUAT_LANDMARKS.RIGHT_SHOULDER,
   ];
@@ -53,8 +52,6 @@ export function areAllLandmarksVisible(landmarks: PoseLandmark[]): {
     [SQUAT_LANDMARKS.RIGHT_HIP]: "Right Hip",
     [SQUAT_LANDMARKS.LEFT_KNEE]: "Left Knee",
     [SQUAT_LANDMARKS.RIGHT_KNEE]: "Right Knee",
-    [SQUAT_LANDMARKS.LEFT_ANKLE]: "Left Ankle",
-    [SQUAT_LANDMARKS.RIGHT_ANKLE]: "Right Ankle",
     [SQUAT_LANDMARKS.LEFT_SHOULDER]: "Left Shoulder",
     [SQUAT_LANDMARKS.RIGHT_SHOULDER]: "Right Shoulder",
   };
@@ -84,11 +81,11 @@ export function areAllLandmarksVisible(landmarks: PoseLandmark[]): {
 }
 
 /**
- * Check if person is in side view (parallel to camera) for squats
+ * Check if person is facing the camera (front view) for squats
  * @param landmarks - Array of pose landmarks
- * @returns true if person is in side view
+ * @returns true if person is facing the camera
  */
-export function checkSideView(landmarks: PoseLandmark[]): {
+export function checkFrontView(landmarks: PoseLandmark[]): {
   isValid: boolean;
   error?: string;
 } {
@@ -101,84 +98,58 @@ export function checkSideView(landmarks: PoseLandmark[]): {
     };
   }
 
-  // Calculate midpoints for body orientation check
-  const shoulderMid = {
-    x: (landmarks[SQUAT_LANDMARKS.LEFT_SHOULDER].x + 
-        landmarks[SQUAT_LANDMARKS.RIGHT_SHOULDER].x) / 2,
-    y: (landmarks[SQUAT_LANDMARKS.LEFT_SHOULDER].y + 
-        landmarks[SQUAT_LANDMARKS.RIGHT_SHOULDER].y) / 2,
-  };
-  const hipMid = {
-    x: (landmarks[SQUAT_LANDMARKS.LEFT_HIP].x + 
-        landmarks[SQUAT_LANDMARKS.RIGHT_HIP].x) / 2,
-    y: (landmarks[SQUAT_LANDMARKS.LEFT_HIP].y + 
-        landmarks[SQUAT_LANDMARKS.RIGHT_HIP].y) / 2,
-  };
-  const ankleMid = {
-    x: (landmarks[SQUAT_LANDMARKS.LEFT_ANKLE].x + 
-        landmarks[SQUAT_LANDMARKS.RIGHT_ANKLE].x) / 2,
-    y: (landmarks[SQUAT_LANDMARKS.LEFT_ANKLE].y + 
-        landmarks[SQUAT_LANDMARKS.RIGHT_ANKLE].y) / 2,
-  };
-
-  // For side view squats:
-  // 1. Body should be oriented vertically (shoulder-ankle line should be mostly vertical)
-  // 2. Shoulders should be at similar Y (both visible from side)
-  // 3. Hips should be at similar Y
-  // 4. The Y difference between shoulder and ankle should be significant (body extends vertically)
-
-  // Check if shoulders are at similar Y (within 5% of frame height)
-  const shoulderYDiff = Math.abs(
-    landmarks[SQUAT_LANDMARKS.LEFT_SHOULDER].y - 
-    landmarks[SQUAT_LANDMARKS.RIGHT_SHOULDER].y
+  // Check body symmetry - if left and right sides are symmetric, person is facing camera
+  // Symmetry means: left and right landmarks are at similar X positions
+  
+  // Check shoulder symmetry (left and right shoulders at similar X)
+  const shoulderXDiff = Math.abs(
+    landmarks[SQUAT_LANDMARKS.LEFT_SHOULDER].x - 
+    landmarks[SQUAT_LANDMARKS.RIGHT_SHOULDER].x
   );
-  const shoulderYThreshold = 0.05; // 5% of frame height
+  const shoulderXThreshold = 0.25; // 25% of frame width - more lenient for symmetry check
 
-  // Check if hips are at similar Y
-  const hipYDiff = Math.abs(
-    landmarks[SQUAT_LANDMARKS.LEFT_HIP].y - 
-    landmarks[SQUAT_LANDMARKS.RIGHT_HIP].y
+  // Check hip symmetry (left and right hips at similar X)
+  const hipXDiff = Math.abs(
+    landmarks[SQUAT_LANDMARKS.LEFT_HIP].x - 
+    landmarks[SQUAT_LANDMARKS.RIGHT_HIP].x
   );
-  const hipYThreshold = 0.05; // 5% of frame height
+  const hipXThreshold = 0.25; // 25% of frame width - more lenient for symmetry check
 
-  // Check if body is oriented vertically (shoulder-ankle line)
-  // In side view, the body extends vertically, so Y difference should be significant
-  // and X difference should be relatively small compared to Y
-  const bodyDeltaX = Math.abs(ankleMid.x - shoulderMid.x);
-  const bodyDeltaY = Math.abs(ankleMid.y - shoulderMid.y);
-  const bodyLength = Math.sqrt(bodyDeltaX * bodyDeltaX + bodyDeltaY * bodyDeltaY);
+  // Check knee symmetry (left and right knees at similar X)
+  const kneeXDiff = Math.abs(
+    landmarks[SQUAT_LANDMARKS.LEFT_KNEE].x - 
+    landmarks[SQUAT_LANDMARKS.RIGHT_KNEE].x
+  );
+  const kneeXThreshold = 0.25; // 25% of frame width - more lenient for symmetry check
 
-  // Body should extend vertically: Y difference should be at least 30% of body length
-  // and X difference should be less than 50% of body length (body is mostly vertical)
-  const verticalRatio = bodyLength > 0.01 ? bodyDeltaY / bodyLength : 0;
-  const horizontalRatio = bodyLength > 0.01 ? bodyDeltaX / bodyLength : 1;
+  // If body is symmetric (left and right sides aligned), person is facing camera
+  // At least 2 out of 3 checks should pass (shoulders, hips, knees)
+  let symmetryCount = 0;
+  if (shoulderXDiff < shoulderXThreshold) symmetryCount++;
+  if (hipXDiff < hipXThreshold) symmetryCount++;
+  if (kneeXDiff < kneeXThreshold) symmetryCount++;
 
-  // Validate side view:
-  // 1. Shoulders aligned (similar Y)
-  // 2. Hips aligned (similar Y)
-  // 3. Body extends vertically (Y > 30% of body length, X < 50% of body length)
-  if (shoulderYDiff > shoulderYThreshold) {
-    return {
-      isValid: false,
-      error: "Position yourself sideways - both shoulders should be visible",
-    };
+  // Need at least 2 symmetric pairs to consider facing camera
+  if (symmetryCount >= 2) {
+    return { isValid: true };
   }
 
-  if (hipYDiff > hipYThreshold) {
-    return {
-      isValid: false,
-      error: "Position yourself sideways - both hips should be visible",
-    };
+  // If not symmetric enough, provide helpful error
+  const errors: string[] = [];
+  if (shoulderXDiff >= shoulderXThreshold) {
+    errors.push("shoulders not aligned");
+  }
+  if (hipXDiff >= hipXThreshold) {
+    errors.push("hips not aligned");
+  }
+  if (kneeXDiff >= kneeXThreshold) {
+    errors.push("knees not aligned");
   }
 
-  if (verticalRatio < 0.3 || horizontalRatio > 0.5) {
-    return {
-      isValid: false,
-      error: "Position yourself sideways - body should extend vertically",
-    };
-  }
-
-  return { isValid: true };
+  return {
+    isValid: false,
+    error: `Face the camera - body not symmetric (${errors.join(", ")})`,
+  };
 }
 
 /**
@@ -213,6 +184,74 @@ export function calculateKneeAngle(landmarks: PoseLandmark[]): number | null {
 }
 
 /**
+ * Get current hip Y position (for tracking squat depth)
+ * @param landmarks - Array of pose landmarks
+ * @returns Average hip Y position or null if not visible
+ */
+export function getHipYPosition(landmarks: PoseLandmark[]): number | null {
+  // Check visibility first
+  const visibility = areAllLandmarksVisible(landmarks);
+  if (!visibility.isValid) {
+    return null;
+  }
+  
+  const leftHipY = landmarks[SQUAT_LANDMARKS.LEFT_HIP].y;
+  const rightHipY = landmarks[SQUAT_LANDMARKS.RIGHT_HIP].y;
+  
+  // Return average hip Y position (higher Y = lower on screen)
+  return (leftHipY + rightHipY) / 2;
+}
+
+/**
+ * Get current knee Y position (for tracking squat depth)
+ * @param landmarks - Array of pose landmarks
+ * @returns Average knee Y position or null if not visible
+ */
+export function getKneeYPosition(landmarks: PoseLandmark[]): number | null {
+  // Check visibility first
+  const visibility = areAllLandmarksVisible(landmarks);
+  if (!visibility.isValid) {
+    return null;
+  }
+  
+  const leftKneeY = landmarks[SQUAT_LANDMARKS.LEFT_KNEE].y;
+  const rightKneeY = landmarks[SQUAT_LANDMARKS.RIGHT_KNEE].y;
+  
+  // Return average knee Y position (higher Y = lower on screen)
+  return (leftKneeY + rightKneeY) / 2;
+}
+
+/**
+ * Check if hip is close to knee level (for rep detection)
+ * @param landmarks - Array of pose landmarks
+ * @returns true if hip is close to knee level
+ */
+export function isHipCloseToKnees(landmarks: PoseLandmark[]): {
+  isClose: boolean;
+  distance?: number; // Distance between hip and knee (as percentage of frame height)
+} {
+  const hipY = getHipYPosition(landmarks);
+  const kneeY = getKneeYPosition(landmarks);
+  
+  if (hipY === null || kneeY === null) {
+    return { isClose: false };
+  }
+  
+  // Calculate distance between hip and knee
+  // Higher Y = lower on screen, so if hipY > kneeY, hip is below knee
+  const distance = Math.abs(hipY - kneeY);
+  
+  // "Close to knees" means hip is within 20% of frame height from knee level
+  // More lenient threshold to ensure detection works
+  const closeThreshold = SQUAT_REP_PARAMS.HIP_TO_KNEE_CLOSE_THRESHOLD; // 20% of frame height (more lenient)
+  
+  return {
+    isClose: distance < closeThreshold,
+    distance,
+  };
+}
+
+/**
  * Check if hip crease is below knee (depth requirement)
  * @param landmarks - Array of pose landmarks
  * @returns Object with depth status
@@ -243,6 +282,50 @@ export function checkHipDepth(landmarks: PoseLandmark[]): {
     return {
       isValid: false,
       error: "Hip crease not below knee - go deeper",
+    };
+  }
+  
+  return { isValid: true };
+}
+
+/**
+ * Check if person is standing up (valid starting form)
+ * @param landmarks - Array of pose landmarks
+ * @param startingHipY - Optional starting hip Y position for comparison
+ * @returns Object with standing status
+ */
+export function checkStandingForm(landmarks: PoseLandmark[]): {
+  isValid: boolean;
+  error?: string;
+} {
+  // Check visibility first
+  const visibility = areAllLandmarksVisible(landmarks);
+  if (!visibility.isValid) {
+    return {
+      isValid: false,
+      error: `Missing landmarks: ${visibility.missingLandmarks?.join(", ")}`,
+    };
+  }
+  
+  // As long as they're standing up (not in a deep squat), it's valid
+  // We check if hip is reasonably high (not too low = not in deep squat)
+  const hipY = getHipYPosition(landmarks);
+  if (hipY === null) {
+    return {
+      isValid: false,
+      error: "Cannot determine hip position",
+    };
+  }
+  
+  // If hip Y is less than 0.7 (hip is in upper 70% of frame), consider it standing
+  // This is a simple check - can be adjusted based on testing
+  const standingThreshold = 0.7;
+  const isValid = hipY < standingThreshold;
+  
+  if (!isValid) {
+    return {
+      isValid: false,
+      error: "Stand up straight to start",
     };
   }
   
@@ -326,14 +409,29 @@ export function checkTorsoPosture(landmarks: PoseLandmark[]): {
  * Check heel contact with floor
  * @param landmarks - Array of pose landmarks
  * @returns true if heels are in contact (simplified check)
+ * Note: Since ankles are not required, this returns true if ankles are not visible
  */
 export function checkHeelContact(landmarks: PoseLandmark[]): boolean {
-  // Simplified: check if heel Y position is stable (not lifting)
-  // In practice, you'd track heel position over time
-  const leftHeelY = landmarks[SQUAT_LANDMARKS.LEFT_HEEL].y;
-  const rightHeelY = landmarks[SQUAT_LANDMARKS.RIGHT_HEEL].y;
-  const leftAnkleY = landmarks[SQUAT_LANDMARKS.LEFT_ANKLE].y;
-  const rightAnkleY = landmarks[SQUAT_LANDMARKS.RIGHT_ANKLE].y;
+  // Since ankles are not required (only knee and above), we can't check heel contact
+  // Return true as a default (heels assumed to be down)
+  const leftAnkle = landmarks[SQUAT_LANDMARKS.LEFT_ANKLE];
+  const rightAnkle = landmarks[SQUAT_LANDMARKS.RIGHT_ANKLE];
+  
+  // If ankles are not visible, assume heels are down (not required to check)
+  if (!leftAnkle || !rightAnkle) {
+    return true;
+  }
+  
+  // If ankles are visible, check heel position (optional check)
+  const leftHeelY = landmarks[SQUAT_LANDMARKS.LEFT_HEEL]?.y;
+  const rightHeelY = landmarks[SQUAT_LANDMARKS.RIGHT_HEEL]?.y;
+  
+  if (leftHeelY === undefined || rightHeelY === undefined) {
+    return true; // Heels not visible, assume down
+  }
+  
+  const leftAnkleY = leftAnkle.y;
+  const rightAnkleY = rightAnkle.y;
   
   // Heel should be at or below ankle (heels down)
   return (leftHeelY >= leftAnkleY) && (rightHeelY >= rightAnkleY);
@@ -343,20 +441,22 @@ export function checkHeelContact(landmarks: PoseLandmark[]): boolean {
  * Rep detection parameters
  */
 export const SQUAT_REP_PARAMS = {
-  // Depth: Knee angle must close to 90° or less
-  KNEE_ANGLE_MAX: 90, // degrees (thigh parallel to or below floor)
-  KNEE_ANGLE_MIN: 0,
+  // Hip-to-knee tracking: Check if hip is close to knee level
+  // "Close to knees" means hip is within this distance from knee level
+  HIP_TO_KNEE_CLOSE_THRESHOLD: 0.20, // 20% of frame height - hip is "close" to knees if within this distance (more lenient)
   
-  // Hip depth: Hip crease must be below knee
-  HIP_DEPTH_REQUIRED: true,
+  // Hip movement thresholds for coming back up
+  HIP_UP_THRESHOLD: 0.08, // 8% of frame height - hip must move up this much from bottom to count as "coming up" (more lenient)
+  HIP_RETURN_THRESHOLD: 0.12, // 12% of frame height - must return within this of starting position to count rep (more lenient)
   
   // Form check thresholds
   KNEE_ALIGNMENT_THRESHOLD: 0.05, // 5% deviation allowed
+  STANDING_THRESHOLD: 0.7, // Hip Y < 0.7 means standing (hip in upper 70% of frame)
 } as const;
 
 /**
  * Comprehensive form validation for squats
- * Returns true only if: all landmarks visible, side view, AND correct form
+ * Returns true only if: all landmarks visible, facing camera, AND correct form
  * @param landmarks - Array of pose landmarks
  * @param kneeAngle - Optional current knee angle to adjust leniency during movement
  */
@@ -367,7 +467,6 @@ export function validateSquatForm(
   isValid: boolean;
   errors: string[];
   sideView?: { isValid: boolean; error?: string };
-  hipDepth?: { isValid: boolean; error?: string };
   kneeAlignment?: { isValid: boolean; error?: string };
 } {
   const errors: string[] = [];
@@ -381,16 +480,20 @@ export function validateSquatForm(
     };
   }
 
-  // Check side view
-  const sideView = checkSideView(landmarks);
-  if (!sideView.isValid) {
-    errors.push(sideView.error || "Not in side view");
+  // Check front view (facing camera) - REQUIRED
+  const frontView = checkFrontView(landmarks);
+  if (!frontView.isValid) {
+    errors.push(frontView.error || "Not facing camera");
   }
 
-  // Check hip depth
-  const hipDepth = checkHipDepth(landmarks);
-  if (!hipDepth.isValid) {
-    errors.push(hipDepth.error || "Hip depth insufficient");
+  // Check if standing (valid starting form)
+  const standingForm = checkStandingForm(landmarks);
+  if (!standingForm.isValid && kneeAngle !== null && kneeAngle !== undefined) {
+    // Only check standing form if we're at the top (knee angle > 150°)
+    // During the squat, we don't need to be standing
+    if (kneeAngle > 150) {
+      errors.push(standingForm.error || "Not in standing position");
+    }
   }
 
   // Check knee alignment
@@ -402,8 +505,7 @@ export function validateSquatForm(
   return {
     isValid: errors.length === 0,
     errors,
-    sideView,
-    hipDepth,
+    sideView: frontView, // Keep for backwards compatibility
     kneeAlignment,
   };
 }
