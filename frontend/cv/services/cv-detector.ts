@@ -513,9 +513,7 @@ export class CVDetector {
 
     // Calculate how much hip has moved from starting position
     const hipMovementFromStart = currentHipY - (this.repState.startingHipY || currentHipY);
-    const _hipMovementFromLast = this.repState.lastHipY !== undefined 
-      ? currentHipY - this.repState.lastHipY 
-      : 0;
+    // const hipMovementFromLast = this.repState.lastHipY !== undefined ? currentHipY - this.repState.lastHipY : 0; // Unused for now
 
     // Debug logging
     const distanceStr = hipKneeCheck.distance ? (hipKneeCheck.distance * 100).toFixed(1) : "N/A";

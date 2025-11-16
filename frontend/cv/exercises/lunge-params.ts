@@ -253,7 +253,7 @@ export function checkFrontShinAlignment(
   // Front shin should be mostly vertical
   // Check if knee travels excessively past toe
   const kneeToeDiff = Math.abs(frontKnee.x - frontToe.x);
-  const _ankleToeDiff = Math.abs(frontAnkle.x - frontToe.x);
+  // const ankleToeDiff = Math.abs(frontAnkle.x - frontToe.x); // Unused for now
   
   // Knee should not be too far forward of toe
   const threshold = 0.1; // 10% of screen width
@@ -286,7 +286,7 @@ export function checkTorsoPosture(landmarks: PoseLandmark[]): {
   
   // Torso should remain upright (shoulders above hips)
   // Check if torso is leaning too far forward
-  const _torsoAngle = Math.abs(shoulderMidY - hipMidY);
+  // const torsoAngle = Math.abs(shoulderMidY - hipMidY); // Unused for now
   
   // Simplified check - torso should maintain relatively upright position
   const isValid = true; // Can be enhanced with actual angle calculation
