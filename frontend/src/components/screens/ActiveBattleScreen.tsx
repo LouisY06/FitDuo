@@ -122,6 +122,8 @@ export function ActiveBattleScreen() {
   const userReadyRef = useRef<boolean>(false);
   const opponentReadyRef = useRef<boolean>(false);
   const wsSendPlayerReadyRef = useRef<((isReady: boolean) => void) | null>(null);
+  // Track which rounds have already been processed to prevent double-counting
+  const processedRoundsRef = useRef<Set<number>>(new Set());
   
   // Game state derived values
   // const gameStateStr = gameState?.status || "countdown"; // Unused
@@ -596,7 +598,9 @@ export function ActiveBattleScreen() {
       return;
     }
     
+    // Update currentRound to the round we're starting
     setCurrentRound(round);
+    console.log(`📊 Updated currentRound to ${round}`);
     // CRITICAL: Hide exercise selection/waiting screen immediately for both players
     setShowExerciseSelection(false);
     setShowRoundEnd(false);
@@ -654,17 +658,38 @@ export function ActiveBattleScreen() {
     currentRound?: number;
   }) => {
     console.log("🏁 Round ended:", data);
-    console.log(`📊 Current round when ending: ${currentRound}, from data: ${data.currentRound}`);
     
-    // Update round wins (frontend tracking)
-    if (data.winnerId === playerId) {
-      setUserRoundsWon(prev => prev + 1);
-    } else if (data.winnerId && data.winnerId !== playerId) {
-      setOpponentRoundsWon(prev => prev + 1);
+    // Use the round number from the backend message (which is the round that just ended)
+    // Prefer data.currentRound from backend, fallback to currentRound state
+    const roundThatJustEnded = data.currentRound !== undefined ? data.currentRound : currentRound;
+    console.log(`🔍 Round that just ended: ${roundThatJustEnded} (from data: ${data.currentRound}, from state: ${currentRound})`);
+    
+    // CRITICAL: Prevent processing the same round end multiple times
+    // This can happen if ROUND_END is received multiple times (e.g., from inactivity timer + server)
+    if (processedRoundsRef.current.has(roundThatJustEnded)) {
+      console.warn(`⚠️ Round ${roundThatJustEnded} already processed - ignoring duplicate ROUND_END`);
+      return;
     }
     
-    const newUserRoundsWon = data.winnerId === playerId ? userRoundsWon + 1 : userRoundsWon;
-    const newOpponentRoundsWon = data.winnerId && data.winnerId !== playerId ? opponentRoundsWon + 1 : opponentRoundsWon;
+    // Mark this round as processed
+    processedRoundsRef.current.add(roundThatJustEnded);
+    console.log(`✅ Processing round ${roundThatJustEnded} end (processed rounds: ${Array.from(processedRoundsRef.current).join(', ')})`);
+    
+    // Update round wins (frontend tracking) - only increment once per round
+    let newUserRoundsWon = userRoundsWon;
+    let newOpponentRoundsWon = opponentRoundsWon;
+    
+    if (data.winnerId === playerId) {
+      newUserRoundsWon = userRoundsWon + 1;
+      setUserRoundsWon(newUserRoundsWon);
+      console.log(`✅ You won round ${roundThatJustEnded}! Your wins: ${newUserRoundsWon}`);
+    } else if (data.winnerId && data.winnerId !== playerId) {
+      newOpponentRoundsWon = opponentRoundsWon + 1;
+      setOpponentRoundsWon(newOpponentRoundsWon);
+      console.log(`❌ Opponent won round ${roundThatJustEnded}. Opponent wins: ${newOpponentRoundsWon}`);
+    } else {
+      console.log(`🤝 Round ${roundThatJustEnded} was a tie`);
+    }
     
     setRoundEndData({
       ...data,
@@ -674,10 +699,6 @@ export function ActiveBattleScreen() {
     setShowRoundEnd(true);
     setRoundEndCountdown(5); // Reset countdown
     
-    // Use the round number from the backend message (which is the round that just ended)
-    // Prefer data.currentRound from backend, fallback to currentRound state
-    const roundThatJustEnded = data.currentRound !== undefined ? data.currentRound : currentRound;
-    console.log(`🔍 Round that just ended: ${roundThatJustEnded} (from data: ${data.currentRound}, from state: ${currentRound})`);
     console.log(`🔍 User wins: ${newUserRoundsWon}, Opponent wins: ${newOpponentRoundsWon}`);
     console.log(`🔍 Game over check: userWins >= 2? ${newUserRoundsWon >= 2}, opponentWins >= 2? ${newOpponentRoundsWon >= 2}, round >= 3? ${roundThatJustEnded >= 3}`);
     
@@ -698,7 +719,12 @@ export function ActiveBattleScreen() {
       return;
     }
     
-    console.log(`✅ Game continues to next round. Current: Round ${roundThatJustEnded}, Next: Round ${roundThatJustEnded + 1}`);
+    // Ensure we're progressing to the next round (not looping)
+    const nextRound = roundThatJustEnded + 1;
+    console.log(`✅ Game continues to next round. Round ${roundThatJustEnded} ended, moving to Round ${nextRound}`);
+    
+    // Update currentRound to the next round to ensure proper progression
+    setCurrentRound(nextRound);
     
     // Determine who chooses next: loser chooses, or if tie, alternate
     let nextChooser: number | null = null;
@@ -715,6 +741,7 @@ export function ActiveBattleScreen() {
     }
     
     setWhoseTurnToChoose(nextChooser);
+    console.log(`🎯 Next round (${nextRound}) chooser: Player ${nextChooser}`);
     
     // After showing round end screen, show exercise selection for next round
     setTimeout(() => {
@@ -724,6 +751,7 @@ export function ActiveBattleScreen() {
       // Show exercise selection screen for both players
       // One will see the selection UI, the other will see the waiting screen
       setShowExerciseSelection(true);
+      console.log(`🎮 Showing exercise selection for Round ${nextRound}`);
     }, 5000); // Show round end screen for 5 seconds
   }, [currentRound, whoseTurnToChoose, playerId, gameState, userRoundsWon, opponentRoundsWon]);
 
