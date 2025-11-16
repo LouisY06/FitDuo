@@ -71,7 +71,6 @@ async def join_queue(
         experience_points=experience_points,
         win_rate=win_rate,
         exercise_id=request.exercise_id,
-        session=session,
     )
     
     if not added:

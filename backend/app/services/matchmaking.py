@@ -52,12 +52,12 @@ class MatchmakingQueue:
         experience_points: int,
         win_rate: float,
         exercise_id: Optional[int] = None,
-        session: Optional[Session] = None
     ) -> bool:
         """
         Add a player to the matchmaking queue.
         
         Returns True if added successfully, False if already in queue.
+        Note: Creates its own database session for async matching operations.
         """
         async with self.lock:
             if player_id in self.queue:
@@ -87,14 +87,20 @@ class MatchmakingQueue:
             while waited < max_wait:
                 if player_id in self.matchmaking_websockets:
                     logger.info(f"Player {player_id} WebSocket registered, attempting match")
-                    await self._try_match_and_notify(player_id, session)
+                    # Create a new session for the async task
+                    from app.database.connection import get_session
+                    with next(get_session()) as new_session:
+                        await self._try_match_and_notify(player_id, new_session)
                     return
                 await asyncio.sleep(wait_interval)
                 waited += wait_interval
             
             # Timeout - try anyway
             logger.warning(f"Player {player_id} WebSocket not registered after {max_wait}s, matching anyway")
-            await self._try_match_and_notify(player_id, session)
+            # Create a new session for the async task
+            from app.database.connection import get_session
+            with next(get_session()) as new_session:
+                await self._try_match_and_notify(player_id, new_session)
         
         asyncio.create_task(wait_for_websocket_then_match())
         
@@ -201,7 +207,13 @@ class MatchmakingQueue:
             first_player = player_ids[0]
             if first_player in self.queue:  # Check still in queue
                 logger.info(f"Trying to match all players in queue (size: {len(player_ids)})")
-                await self._try_match_and_notify(first_player, session)
+                # Create a new session if none provided
+                if session is None:
+                    from app.database.connection import get_session
+                    with next(get_session()) as new_session:
+                        await self._try_match_and_notify(first_player, new_session)
+                else:
+                    await self._try_match_and_notify(first_player, session)
                 await asyncio.sleep(0.5)  # Small delay
     
     async def _create_match(
